@@ -6,7 +6,9 @@ const Sequelize = require('sequelize');
 const process = require('process');
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'development';
+console.log(`[DB Init] Loading database config for environment: ${env}`);
 const config = require('../../config/database')[env];
+console.log(`[DB Init] Config loaded:`, JSON.stringify({ ...config, password: '***' }, null, 2));
 const db = {};
 
 let sequelize;

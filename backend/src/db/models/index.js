@@ -13,9 +13,14 @@ const db = {};
 
 let sequelize;
 if (config.use_env_variable) {
-    sequelize = new Sequelize(process.env[config.use_env_variable], config);
+    const connectionString = process.env[config.use_env_variable];
+    const options = { ...config };
+    delete options.use_env_variable; // Remove this key as it's not a Sequelize option
+    sequelize = new Sequelize(connectionString, options);
+    console.log(`[DB Init] Using DATABASE_URL with SSL:`, options.dialectOptions?.ssl ? 'enabled' : 'disabled');
 } else {
     sequelize = new Sequelize(config.database, config.username, config.password, config);
+    console.log(`[DB Init] Using individual credentials`);
 }
 
 fs

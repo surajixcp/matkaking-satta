@@ -1,0 +1,321 @@
+
+import React, { useState } from 'react';
+import {
+  Smartphone, Shield, Globe, Image as ImageIcon,
+  Save, AlertTriangle, Check, Headphones,
+  Settings as SettingsIcon, Link2, Palette
+} from 'lucide-react';
+
+import { settingsService } from '../services/api';
+
+const SettingsScreen: React.FC = () => {
+  // App Version State
+  const [version, setVersion] = useState('v2.4.1');
+  const [forceUpdate, setForceUpdate] = useState(true);
+
+  // Branding State
+  const [appName, setAppName] = useState('BetPro India');
+  const [primaryColor, setPrimaryColor] = useState('#4f46e5');
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  // Global Config State
+  const [timezone, setTimezone] = useState('(GMT+05:30) Mumbai, New Delhi');
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [currency, setCurrency] = useState('₹');
+
+  // Payment Config
+  const [upiId, setUpiId] = useState('');
+
+  // Support State
+  const [whatsapp, setWhatsapp] = useState('+91 90000 12345');
+  const [telegram, setTelegram] = useState('@betpro_official');
+
+  // UI States
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success'>('idle');
+
+  // Load Settings
+  React.useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const response = await settingsService.getAll();
+      if (response && response.data) {
+        const s = response.data;
+        if (s.upi_id) setUpiId(s.upi_id);
+      }
+    } catch (error) {
+      console.error('Failed to load settings', error);
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await settingsService.update({
+        upi_id: upiId,
+        // Add other settings here as we implement them in backend
+      });
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch (error) {
+      console.error('Failed to save settings', error);
+      alert('Failed to save settings');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">System Settings</h3>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium">Global app behavior and branding</p>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className={`${saveStatus === 'success' ? 'bg-emerald-600' : 'bg-indigo-600'
+            } text-white w-full md:w-auto px-6 py-3 sm:px-10 sm:py-3.5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:opacity-90 transition-all shadow-xl shadow-indigo-600/20 active:scale-95 disabled:opacity-70`}
+        >
+          {isSaving ? (
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          ) : saveStatus === 'success' ? (
+            <Check size={20} />
+          ) : (
+            <Save size={20} />
+          )}
+          <span className="text-sm sm:text-base">{isSaving ? 'Saving...' : saveStatus === 'success' ? 'Saved!' : 'Save Changes'}</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+        {/* App Version Config */}
+        <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6 sm:space-y-8">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+              <Smartphone size={22} />
+            </div>
+            <h4 className="text-base sm:text-lg font-bold text-slate-900">App Lifecycle</h4>
+          </div>
+
+          <div className="space-y-4 sm:space-y-6">
+            <div>
+              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Live App Version</label>
+              <input
+                type="text"
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+              />
+              <p className="text-[10px] text-slate-400 mt-2 font-medium">Displayed to users in About section.</p>
+            </div>
+
+            <div className={`flex items-center justify-between p-4 sm:p-5 rounded-2xl border transition-colors ${forceUpdate ? 'bg-rose-50 border-rose-100' : 'bg-slate-50 border-slate-200'}`}>
+              <div>
+                <p className={`text-xs sm:text-sm font-bold ${forceUpdate ? 'text-rose-700' : 'text-slate-800'}`}>Force Update</p>
+                <p className="text-[10px] sm:text-xs text-slate-500 mt-1">Required to access app</p>
+              </div>
+              <button
+                onClick={() => setForceUpdate(!forceUpdate)}
+                className={`w-12 sm:w-14 h-6 sm:h-7 rounded-full relative transition-all p-1 flex items-center ${forceUpdate ? 'bg-rose-600 justify-end' : 'bg-slate-300 justify-start'}`}
+              >
+                <div className="w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-full shadow-md"></div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Branding & Logo */}
+        <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6 sm:space-y-8">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+              <Palette size={22} />
+            </div>
+            <h4 className="text-base sm:text-lg font-bold text-slate-900">Branding</h4>
+          </div>
+
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+              <div className="relative group shrink-0">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 overflow-hidden">
+                  {logoPreview ? (
+                    <img src={logoPreview} alt="App Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <ImageIcon size={28} />
+                  )}
+                </div>
+                <label className="absolute inset-0 flex items-center justify-center bg-slate-900/40 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-2xl">
+                  <input type="file" className="hidden" onChange={handleLogoUpload} accept="image/*" />
+                  <span className="text-[10px] font-bold uppercase">Change</span>
+                </label>
+              </div>
+              <div className="flex-1 w-full">
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1">Display Name</label>
+                <input
+                  type="text"
+                  value={appName}
+                  onChange={(e) => setAppName(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-slate-800 outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Theme Color</label>
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-slate-200 shadow-sm shrink-0"
+                  style={{ backgroundColor: primaryColor }}
+                ></div>
+                <input
+                  type="text"
+                  value={primaryColor}
+                  onChange={(e) => setPrimaryColor(e.target.value)}
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-mono font-bold text-slate-800 outline-none"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Support & Contact */}
+        <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6 sm:space-y-8">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+              <Headphones size={22} />
+            </div>
+            <h4 className="text-base sm:text-lg font-bold text-slate-900">Support</h4>
+          </div>
+
+          <div className="space-y-4 sm:space-y-6">
+            <div>
+              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">WhatsApp Help</label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500">
+                  <Link2 size={16} />
+                </div>
+                <input
+                  type="text"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  placeholder="+91 00000 00000"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-slate-800 outline-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Telegram User</label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-sky-500">
+                  <Link2 size={16} />
+                </div>
+                <input
+                  type="text"
+                  value={telegram}
+                  onChange={(e) => setTelegram(e.target.value)}
+                  placeholder="@username"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-slate-800 outline-none"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Global Settings */}
+        <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6 sm:space-y-8">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+              <Globe size={22} />
+            </div>
+            <h4 className="text-base sm:text-lg font-bold text-slate-900">Configuration</h4>
+          </div>
+
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Currency</label>
+                <input
+                  type="text"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-slate-800 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Timezone</label>
+                <select
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-slate-800 outline-none appearance-none"
+                >
+                  <option>(GMT+05:30) India</option>
+                  <option>(GMT+00:00) UTC</option>
+                </select>
+              </div>
+            </div>
+
+            <div className={`flex items-center justify-between p-4 sm:p-5 rounded-2xl border transition-all ${maintenanceMode ? 'bg-amber-50 border-amber-200 shadow-inner' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="flex gap-3 sm:gap-4 items-center overflow-hidden">
+                <div className={`p-2 sm:p-3 rounded-xl shrink-0 ${maintenanceMode ? 'bg-amber-100 text-amber-600' : 'bg-slate-200 text-slate-400'}`}>
+                  <AlertTriangle size={18} />
+                </div>
+                <div className="overflow-hidden">
+                  <p className={`text-xs sm:text-sm font-bold truncate ${maintenanceMode ? 'text-amber-700' : 'text-slate-800'}`}>Maintenance Mode</p>
+                  <p className="text-[10px] sm:text-xs text-slate-500 mt-1 truncate">{maintenanceMode ? 'App Locked' : 'Live Access'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setMaintenanceMode(!maintenanceMode)}
+                className={`w-12 sm:w-14 h-6 sm:h-7 rounded-full relative transition-all p-1 flex items-center shrink-0 ${maintenanceMode ? 'bg-amber-500 justify-end' : 'bg-slate-300 justify-start'}`}
+              >
+                <div className="w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-full shadow-md"></div>
+              </button>
+            </div>
+          </div>
+        </div>
+        {/* Payment Settings */}
+        <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6 sm:space-y-8">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+              <SettingsIcon size={22} />
+            </div>
+            <h4 className="text-base sm:text-lg font-bold text-slate-900">Payment Configuration</h4>
+          </div>
+
+          <div className="space-y-4 sm:space-y-6">
+            <div>
+              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Admin UPI ID</label>
+              <input
+                type="text"
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+                placeholder="merchant@upi"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+              />
+              <p className="text-[10px] text-slate-400 mt-2 font-medium">This ID will be used for QR code generation in user app.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+export default SettingsScreen;

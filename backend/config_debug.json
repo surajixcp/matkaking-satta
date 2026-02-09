@@ -1,0 +1,7 @@
+{
+  "username": "postgres",
+  "database": "matkaking_db",
+  "host": "127.0.0.1",
+  "port": "5432",
+  "cwd": "C:\\Users\\SURAJ\\OneDrive\\Desktop\\gambling\\backend"
+}

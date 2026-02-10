@@ -13,6 +13,11 @@ module.exports = (sequelize) => {
             type: DataTypes.INTEGER,
             references: { model: 'Users', key: 'id' }
         },
+        approved_by: {
+            type: DataTypes.INTEGER,
+            references: { model: 'Users', key: 'id' },
+            allowNull: true
+        },
         amount: {
             type: DataTypes.DECIMAL(10, 2),
             allowNull: false

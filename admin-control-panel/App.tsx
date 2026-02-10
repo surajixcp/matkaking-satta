@@ -25,7 +25,7 @@ const INITIAL_WITHDRAWALS: WithdrawalRequest[] = [];
 const INITIAL_BIDS: Bid[] = [];
 
 const App: React.FC = () => {
-  const [currentScreen, setCurrentScreen] = useState<Screen>(Screen.LOGIN);
+  const [currentScreen, setCurrentScreen] = useState<Screen>(Screen.DASHBOARD);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
@@ -40,6 +40,23 @@ const App: React.FC = () => {
   const [bids, setBids] = useState<Bid[]>(INITIAL_BIDS);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Check for existing authentication on mount
+  useEffect(() => {
+    const checkAuth = () => {
+      const isAuthenticated = authService.isAuthenticated();
+      setIsLoggedIn(isAuthenticated);
+      if (isAuthenticated) {
+        setCurrentScreen(Screen.DASHBOARD);
+      } else {
+        setCurrentScreen(Screen.LOGIN);
+      }
+      setIsCheckingAuth(false);
+    };
+
+    checkAuth();
+  }, []);
 
   // Fetch Data on Load
   useEffect(() => {
@@ -74,6 +91,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    authService.logout();
     setIsLoggedIn(false);
     setCurrentScreen(Screen.LOGIN);
   };
@@ -82,6 +100,15 @@ const App: React.FC = () => {
     setSelectedUserId(id);
     setCurrentScreen(Screen.USER_PROFILE);
   };
+
+  // Show loading spinner while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-50">
+        <div className="w-12 h-12 border-4 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   if (!isLoggedIn) {
     return <LoginScreen onLogin={handleLogin} />;

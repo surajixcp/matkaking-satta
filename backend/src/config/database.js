@@ -1,5 +1,7 @@
-const fs = require('fs');
-require('dotenv').config();
+// Only load .env in non-production (local development)
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config();
+}
 
 const dbConfig = {
     username: process.env.DB_USERNAME || process.env.DB_USER,
@@ -15,12 +17,12 @@ const dbConfig = {
 if (process.env.DATABASE_URL) {
     Object.assign(dbConfig, {
         use_env_variable: 'DATABASE_URL',
+        protocol: 'postgres',
         dialectOptions: {
             ssl: {
                 require: true,
-                rejectUnauthorized: false // Crucial for Render
-            },
-            keepAlive: true, // Prevent timeouts
+                rejectUnauthorized: false
+            }
         },
         pool: {
             max: 5,

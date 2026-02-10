@@ -49,16 +49,20 @@ db.Sequelize = Sequelize;
 
 /**
  * Ensure database connection with retry mechanism
- * Production-grade reconnection logic
+ * Production-grade reconnection logic with retry limit
  */
-async function ensureDBConnection() {
+async function ensureDBConnection(retries = 5) {
     try {
         await sequelize.authenticate();
         console.log('[DB] Connection verified');
     } catch (error) {
-        console.log('[DB] Retry connection...', error.message);
-        await new Promise(r => setTimeout(r, 3000));
-        return ensureDBConnection();
+        if (retries === 0) {
+            console.error('[DB] Failed permanently after all retries');
+            throw error;
+        }
+        console.log(`[DB] Retry connection... (${retries} attempts remaining)`, error.message);
+        await new Promise(r => setTimeout(r, 5000));
+        return ensureDBConnection(retries - 1);
     }
 }
 

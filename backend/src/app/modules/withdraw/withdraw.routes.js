@@ -5,16 +5,16 @@
 const express = require('express');
 const router = express.Router();
 const withdrawController = require('./withdraw.controller.js');
-const authMiddleware = require('../../middlewares/auth.middleware.js');
+const { protect } = require('../../middlewares/auth.middleware.js');
 const adminMiddleware = require('../../middlewares/admin.middleware.js');
 
 // User routes
-router.post('/', authMiddleware, withdrawController.requestWithdraw);
-router.get('/history', authMiddleware, withdrawController.getWithdrawHistory);
+router.post('/', protect, withdrawController.requestWithdraw);
+router.get('/history', protect, withdrawController.getWithdrawHistory);
 
 // Admin routes
-router.get('/admin/all', authMiddleware, adminMiddleware, withdrawController.getAllWithdrawals);
-router.post('/admin/:id/approve', authMiddleware, adminMiddleware, withdrawController.approveWithdrawal);
-router.post('/admin/:id/reject', authMiddleware, adminMiddleware, withdrawController.rejectWithdrawal);
+router.get('/admin/all', protect, adminMiddleware, withdrawController.getAllWithdrawals);
+router.post('/admin/:id/approve', protect, adminMiddleware, withdrawController.approveWithdrawal);
+router.post('/admin/:id/reject', protect, adminMiddleware, withdrawController.rejectWithdrawal);
 
 module.exports = router;

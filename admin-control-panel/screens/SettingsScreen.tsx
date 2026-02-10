@@ -29,6 +29,8 @@ const SettingsScreen: React.FC = () => {
   // Support State
   const [whatsapp, setWhatsapp] = useState('+91 90000 12345');
   const [telegram, setTelegram] = useState('@betpro_official');
+  const [email, setEmail] = useState('support@kingmatka.com');
+  const [phone, setPhone] = useState('+91 90000 12345');
 
   // UI States
   const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +64,8 @@ const SettingsScreen: React.FC = () => {
         if (s.upi_id) setUpiId(s.upi_id);
         if (s.whatsapp) setWhatsapp(s.whatsapp);
         if (s.telegram) setTelegram(s.telegram);
+        if (s.email) setEmail(s.email);
+        if (s.phone) setPhone(s.phone);
       }
     } catch (error) {
       console.error('Failed to load settings', error);
@@ -87,6 +91,16 @@ const SettingsScreen: React.FC = () => {
     // Validate Telegram
     if (telegram && !/^@[\w]{5,32}$/.test(telegram)) {
       newErrors.telegram = 'Invalid Telegram username (e.g., @username)';
+    }
+
+    // Validate Email
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = 'Invalid email format (e.g., support@example.com)';
+    }
+
+    // Validate Phone
+    if (phone && !/^\+\d{1,3}\s?\d{5,15}$/.test(phone.replace(/\s/g, ''))) {
+      newErrors.phone = 'Invalid phone format (e.g., +91 90000 12345)';
     }
 
     // Validate Color
@@ -130,6 +144,8 @@ const SettingsScreen: React.FC = () => {
         upi_id: upiId,
         whatsapp: whatsapp,
         telegram: telegram,
+        email: email,
+        phone: phone,
       });
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -348,6 +364,38 @@ const SettingsScreen: React.FC = () => {
                 />
               </div>
               {errors.telegram && <p className="text-[10px] text-red-500 mt-1">{errors.telegram}</p>}
+            </div>
+            <div>
+              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Email Support</label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500">
+                  <Link2 size={16} />
+                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="support@example.com"
+                  className={`w-full bg-slate-50 border ${errors.email ? 'border-red-300' : 'border-slate-200'} rounded-xl pl-11 pr-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-slate-800 outline-none`}
+                />
+              </div>
+              {errors.email && <p className="text-[10px] text-red-500 mt-1">{errors.email}</p>}
+            </div>
+            <div>
+              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Call Us</label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500">
+                  <Link2 size={16} />
+                </div>
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+91 00000 00000"
+                  className={`w-full bg-slate-50 border ${errors.phone ? 'border-red-300' : 'border-slate-200'} rounded-xl pl-11 pr-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-slate-800 outline-none`}
+                />
+              </div>
+              {errors.phone && <p className="text-[10px] text-red-500 mt-1">{errors.phone}</p>}
             </div>
           </div>
         </div>

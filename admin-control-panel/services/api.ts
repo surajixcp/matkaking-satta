@@ -148,21 +148,21 @@ export const walletService = {
         const withdrawals = response.data.data || [];
         return withdrawals.map((w: any) => ({
             id: w.id.toString(),
-            userId: w.user_id?.toString() || 'Unknown',
-            userName: w.user_name || 'Unknown',
+            userId: w.user_id?.toString() || w.user?.id?.toString() || 'Unknown',
+            userName: w.user?.full_name || w.user?.username || 'Unknown',
             amount: parseFloat(w.amount),
             status: w.status,
             method: 'UPI', // Default for now
             details: {
-                holderName: w.user_name || '',
+                holderName: w.user?.full_name || '',
                 bankName: '',
                 accountNo: '',
                 ifsc: '',
-                upiId: w.user_phone || ''
+                upiId: w.user?.phone || ''
             },
-            requestedAt: new Date(w.created_at || w.createdAt).toLocaleString(),
-            processedAt: w.updated_at ? new Date(w.updated_at).toLocaleString() : undefined,
-            rejectionReason: w.remark
+            requestedAt: new Date(w.createdAt).toLocaleString(),
+            processedAt: w.updatedAt ? new Date(w.updatedAt).toLocaleString() : undefined,
+            rejectionReason: w.admin_remark
         }));
     },
     approveWithdrawal: async (id: string) => {

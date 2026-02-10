@@ -18,5 +18,6 @@ router.use('/otp', require('./otp.routes'));
 router.use('/results', require('./results.routes'));
 router.use('/deposits', require('./deposit.routes'));
 router.use('/settings', require('./settings.routes'));
+router.use('/withdraw', require('../modules/withdraw/withdraw.routes'));
 
 module.exports = router;

@@ -4,6 +4,7 @@ module.exports = (sequelize) => {
     class WithdrawRequest extends Model {
         static associate(models) {
             WithdrawRequest.belongsTo(models.User, { foreignKey: 'user_id', as: 'user' });
+            WithdrawRequest.belongsTo(models.User, { foreignKey: 'approved_by', as: 'approver' });
         }
     }
 

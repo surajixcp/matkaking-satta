@@ -144,33 +144,33 @@ export const resultService = {
 
 export const walletService = {
     getWithdrawals: async (status: string = 'all') => {
-        const response = await api.get('/wallet/withdrawals', { params: { status } });
-        const withdrawals = response.data.data.rows || response.data.data;
+        const response = await api.get('/withdraw/admin/all', { params: { status: status !== 'all' ? status : undefined } });
+        const withdrawals = response.data.data || [];
         return withdrawals.map((w: any) => ({
             id: w.id.toString(),
-            userId: w.user?.username || 'Unknown', // Mapping user object
-            userName: w.user?.username || 'Unknown', // Duplicate for UI
+            userId: w.user_id?.toString() || 'Unknown',
+            userName: w.user_name || 'Unknown',
             amount: parseFloat(w.amount),
             status: w.status,
-            method: w.bank_details?.method || 'Bank',
+            method: 'UPI', // Default for now
             details: {
-                holderName: w.bank_details?.account_holder_name || w.bank_details?.holder_name || '',
-                bankName: w.bank_details?.bank_name || '',
-                accountNo: w.bank_details?.account_number || '',
-                ifsc: w.bank_details?.ifsc_code || '',
-                upiId: w.bank_details?.upi_id || ''
+                holderName: w.user_name || '',
+                bankName: '',
+                accountNo: '',
+                ifsc: '',
+                upiId: w.user_phone || ''
             },
             requestDate: new Date(w.created_at || w.createdAt).toLocaleString(),
-            processedDate: w.updatedAt ? new Date(w.updatedAt).toLocaleString() : undefined,
-            rejectionReason: w.admin_remark
+            processedDate: w.updated_at ? new Date(w.updated_at).toLocaleString() : undefined,
+            rejectionReason: w.remark
         }));
     },
     approveWithdrawal: async (id: string) => {
-        const response = await api.put(`/wallet/withdrawals/${id}/approve`);
+        const response = await api.post(`/withdraw/admin/${id}/approve`);
         return response.data;
     },
     rejectWithdrawal: async (id: string, reason: string) => {
-        const response = await api.put(`/wallet/withdrawals/${id}/reject`, { reason });
+        const response = await api.post(`/withdraw/admin/${id}/reject`, { remark: reason });
         return response.data;
     }
 };

@@ -18,12 +18,6 @@ if (process.env.DATABASE_URL) {
     Object.assign(dbConfig, {
         use_env_variable: 'DATABASE_URL',
         protocol: 'postgres',
-        dialectOptions: {
-            ssl: {
-                require: true,
-                rejectUnauthorized: false
-            }
-        },
         pool: {
             max: 5,
             min: 1,

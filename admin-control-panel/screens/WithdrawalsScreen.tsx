@@ -128,9 +128,9 @@ const WithdrawalsScreen: React.FC<WithdrawalsScreenProps> = () => {
       await walletService.approveWithdrawal(id);
       alert('Withdrawal Approved');
       loadWithdrawals();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Approval failed", error);
-      alert('Failed to approve');
+      alert('Failed to approve: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -139,9 +139,9 @@ const WithdrawalsScreen: React.FC<WithdrawalsScreenProps> = () => {
       await walletService.rejectWithdrawal(id, reason);
       alert('Withdrawal Rejected');
       loadWithdrawals();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Rejection failed", error);
-      alert('Failed to reject');
+      alert('Failed to reject: ' + (error.response?.data?.message || error.message));
     }
   };
 

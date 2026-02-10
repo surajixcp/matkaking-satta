@@ -7,6 +7,7 @@ const compression = require('compression');
 const { createServer } = require('http');
 const { Server } = require("socket.io");
 const resultFetcherService = require('./app/services/result-fetcher.service');
+const { startHeartbeat } = require('./db/models');
 
 const app = express();
 const httpServer = createServer(app);
@@ -49,6 +50,7 @@ httpServer.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`[DEBUG] Backend Server Restarted at ${new Date().toISOString()}`);
     resultFetcherService.init(); // Start Cron Jobs
+    startHeartbeat(); // Start DB heartbeat to prevent sleep
 });
 
 // Socket.io connection (basic)

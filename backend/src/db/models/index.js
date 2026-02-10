@@ -47,4 +47,39 @@ Object.keys(db).forEach(modelName => {
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
+/**
+ * Ensure database connection with retry mechanism
+ * Production-grade reconnection logic
+ */
+async function ensureDBConnection() {
+    try {
+        await sequelize.authenticate();
+        console.log('[DB] Connection verified');
+    } catch (error) {
+        console.log('[DB] Retry connection...', error.message);
+        await new Promise(r => setTimeout(r, 3000));
+        return ensureDBConnection();
+    }
+}
+
+/**
+ * Start heartbeat to prevent Render free DB from sleeping
+ * Pings database every 4 minutes
+ */
+function startHeartbeat() {
+    setInterval(async () => {
+        try {
+            await sequelize.query("SELECT 1");
+            console.log('[DB Heartbeat] Ping successful');
+        } catch (error) {
+            console.error('[DB Heartbeat] Failed:', error.message);
+        }
+    }, 240000); // 4 minutes
+    console.log('[DB] Heartbeat started (4-minute interval)');
+}
+
+// Export connection helpers
+db.ensureDBConnection = ensureDBConnection;
+db.startHeartbeat = startHeartbeat;
+
 module.exports = db;

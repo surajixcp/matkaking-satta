@@ -24,9 +24,10 @@ if (process.env.DATABASE_URL) {
         },
         pool: {
             max: 5,
-            min: 0,
-            acquire: 30000,
-            idle: 10000
+            min: 1,
+            acquire: 60000,
+            idle: 10000,
+            evict: 1000
         }
     });
 }
@@ -39,9 +40,10 @@ module.exports = {
         logging: false,
         pool: {
             max: 5,
-            min: 0,
-            acquire: 30000,
-            idle: 10000
+            min: 1,
+            acquire: 60000,
+            idle: 10000,
+            evict: 1000
         }
     }
 };

@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const axios = require('axios');
-const { Market, Result, sequelize } = require('../../db/models');
+const { Market, Result, sequelize, ensureDBConnection } = require('../../db/models');
 const { sendToTopic } = require('../../utils/push');
 // const winningDistributionService = require('./winning-distribution.service');
 
@@ -25,6 +25,8 @@ class ResultFetcherService {
 
             this.isRunning = true;
             try {
+                // Ensure DB connection before running job
+                await ensureDBConnection();
                 console.log('Running Result Fetcher Job...');
                 await this.fetchAndProcessResults();
             } catch (error) {

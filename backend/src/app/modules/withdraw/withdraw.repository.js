@@ -25,8 +25,8 @@ async function createWithdraw(data) {
 async function getWithdrawById(id) {
     return await WithdrawRequest.findByPk(id, {
         include: [
-            { model: User, as: 'user', attributes: ['id', 'full_name', 'phone', 'username'] },
-            { model: User, as: 'approver', attributes: ['id', 'full_name', 'username'] }
+            { model: User, as: 'user', attributes: ['id', 'full_name', 'phone'] },
+            { model: User, as: 'approver', attributes: ['id', 'full_name'] }
         ]
     });
 }
@@ -49,7 +49,7 @@ async function getAllWithdraws(filters = {}) {
     const query = {
         where: {},
         include: [
-            { model: User, as: 'user', attributes: ['id', 'full_name', 'phone', 'username'] }
+            { model: User, as: 'user', attributes: ['id', 'full_name', 'phone'] }
         ],
         order: [['createdAt', 'DESC']],
     };

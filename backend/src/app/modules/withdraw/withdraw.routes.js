@@ -5,8 +5,8 @@
 const express = require('express');
 const router = express.Router();
 const withdrawController = require('./withdraw.controller.js');
-const authMiddleware = require('../../middleware/auth.middleware.js');
-const adminMiddleware = require('../../middleware/admin.middleware.js');
+const authMiddleware = require('../../middlewares/auth.middleware.js');
+const adminMiddleware = require('../../middlewares/admin.middleware.js');
 
 // User routes
 router.post('/', authMiddleware, withdrawController.requestWithdraw);

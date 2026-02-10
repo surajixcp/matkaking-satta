@@ -160,8 +160,8 @@ export const walletService = {
                 ifsc: '',
                 upiId: w.user_phone || ''
             },
-            requestDate: new Date(w.created_at || w.createdAt).toLocaleString(),
-            processedDate: w.updated_at ? new Date(w.updated_at).toLocaleString() : undefined,
+            requestedAt: new Date(w.created_at || w.createdAt).toLocaleString(),
+            processedAt: w.updated_at ? new Date(w.updated_at).toLocaleString() : undefined,
             rejectionReason: w.remark
         }));
     },

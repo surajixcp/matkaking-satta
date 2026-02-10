@@ -5,6 +5,7 @@ import {
   ArrowLeft, ChevronRight, Download, Trash2
 } from 'lucide-react';
 import { WithdrawalRequest } from '../types';
+import { walletService } from '../services/api';
 
 interface WithdrawalsScreenProps {
   withdrawals: WithdrawalRequest[];

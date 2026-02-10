@@ -79,6 +79,75 @@ class WalletService {
     }
 
     /**
+     * Debit funds from wallet (for withdrawals, bets, etc.)
+     * Uses atomic transaction
+     */
+    async debit(userId, amount, description = 'Debit', referenceId = null) {
+        const transaction = await sequelize.transaction();
+        try {
+            const wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
+            if (!wallet) throw new Error('Wallet not found');
+
+            // Check balance
+            if (parseFloat(wallet.balance) < parseFloat(amount)) {
+                throw new Error('Insufficient balance');
+            }
+
+            // Update Balance
+            const newBalance = parseFloat(wallet.balance) - parseFloat(amount);
+            await wallet.update({ balance: newBalance }, { transaction });
+
+            // Record Transaction
+            await WalletTransaction.create({
+                wallet_id: wallet.id,
+                amount: amount,
+                type: 'withdraw',
+                description,
+                reference_id: referenceId,
+                status: 'pending'
+            }, { transaction });
+
+            await transaction.commit();
+            return wallet;
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    }
+
+    /**
+     * Credit funds to wallet (for refunds, wins, etc.)
+     * Uses atomic transaction
+     */
+    async credit(userId, amount, description = 'Credit', referenceId = null) {
+        const transaction = await sequelize.transaction();
+        try {
+            const wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
+            if (!wallet) throw new Error('Wallet not found');
+
+            // Update Balance
+            const newBalance = parseFloat(wallet.balance) + parseFloat(amount);
+            await wallet.update({ balance: newBalance }, { transaction });
+
+            // Record Transaction
+            await WalletTransaction.create({
+                wallet_id: wallet.id,
+                amount: amount,
+                type: 'deposit',
+                description,
+                reference_id: referenceId,
+                status: 'success'
+            }, { transaction });
+
+            await transaction.commit();
+            return wallet;
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
+    }
+
+    /**
      * Request Withdrawal
      */
     async requestWithdraw(userId, amount, bankDetails) {

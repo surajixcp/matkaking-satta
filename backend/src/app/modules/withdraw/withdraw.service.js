@@ -71,12 +71,13 @@ async function approveWithdraw(withdrawId, adminId, remark = null) {
     }
 
     // Update status
-    status: 'approved',
+    const updated = await withdrawRepo.updateWithdraw(withdrawId, {
+        status: 'approved',
         approved_by: adminId,
-            admin_remark: remark,
+        admin_remark: remark,
     });
 
-return updated;
+    return updated;
 }
 
 /**

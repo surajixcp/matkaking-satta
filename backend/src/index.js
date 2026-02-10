@@ -60,6 +60,22 @@ async function initDatabase() {
         await sequelize.sync({ alter: false }); // Use alter: true to modify existing tables
         console.log('✅ All database tables synced');
 
+        // Add withdrawal columns if they don't exist
+        try {
+            console.log('🔄 Checking withdrawal columns...');
+            await sequelize.query(`
+                ALTER TABLE "WithdrawRequests" 
+                ADD COLUMN IF NOT EXISTS "approved_by" INTEGER REFERENCES "Users"(id);
+            `);
+            await sequelize.query(`
+                ALTER TABLE "WithdrawRequests" 
+                ADD COLUMN IF NOT EXISTS "admin_remark" VARCHAR(255);
+            `);
+            console.log('✅ Withdrawal columns ready');
+        } catch (colError) {
+            console.log('⚠️  Withdrawal columns check:', colError.message);
+        }
+
         // Seed admin user if not exists
         const adminPhone = '9999999999';
         const adminMpin = '1234';

@@ -113,7 +113,16 @@ class AdminService {
             order: [['created_at', 'DESC']]
         });
 
-        return { transactions, withdrawals };
+        const bids = await Bid.findAll({
+            where: { user_id: userId },
+            include: [
+                { model: Market, as: 'market', attributes: ['name'] },
+                { model: GameType, as: 'game_type', attributes: ['name', 'rate'] }
+            ],
+            order: [['created_at', 'DESC']]
+        });
+
+        return { transactions, withdrawals, bids };
     }
 }
 

@@ -100,6 +100,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
   const [activeTab, setActiveTab] = useState('wallet');
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
   const [historyWithdrawals, setHistoryWithdrawals] = useState<WithdrawalRequest[]>([]);
+  const [historyBids, setHistoryBids] = useState<Bid[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Filter specific user data
@@ -114,9 +115,10 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
     const fetchHistory = async () => {
       setIsLoadingHistory(true);
       try {
-        const { transactions: txns, withdrawals } = await userService.getUserHistory(user.id, user.name);
+        const { transactions: txns, withdrawals, bids } = await userService.getUserHistory(user.id, user.name);
         if (isMounted) {
           setHistoryWithdrawals(withdrawals);
+          setHistoryBids(bids);
           // Merge transactions: Remove old ones for this user and add new fetched ones
           setTransactions(prev => {
             const others = prev.filter(t => t.userId !== user.id);
@@ -400,8 +402,8 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
                         </td>
                         <td className="px-4 sm:px-6 py-4 sm:py-5">
                           <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${w.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
-                              w.status === 'rejected' ? 'bg-rose-50 text-rose-600' :
-                                'bg-amber-50 text-amber-600'
+                            w.status === 'rejected' ? 'bg-rose-50 text-rose-600' :
+                              'bg-amber-50 text-amber-600'
                             }`}>
                             {w.status}
                           </span>
@@ -421,7 +423,52 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
               </table>
             )}
 
-            {(activeTab === 'bids' || activeTab === 'support') && (
+            {activeTab === 'bids' && (
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+                    <th className="px-4 sm:px-6 py-4">Market / Game</th>
+                    <th className="px-4 sm:px-6 py-4">Selection</th>
+                    <th className="px-4 sm:px-6 py-4 text-right">Amount</th>
+                    <th className="px-4 sm:px-6 py-4 text-right">Result</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {historyBids.length > 0 ? (
+                    historyBids.map((b) => (
+                      <tr key={b.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-4 sm:px-6 py-4 sm:py-5">
+                          <div className="flex flex-col">
+                            <span className="text-xs sm:text-sm font-black text-slate-800 tracking-tight">{b.gameName}</span>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{b.marketType} • {b.session.toUpperCase()}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 sm:py-5">
+                          <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded font-mono text-xs font-bold tracking-widest">
+                            {b.digits}
+                          </span>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 sm:py-5 text-right font-black text-slate-900 text-xs sm:text-sm">
+                          ₹{b.amount.toLocaleString()}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 sm:py-5 text-right">
+                          <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${b.status === 'won' ? 'bg-emerald-50 text-emerald-600' :
+                            b.status === 'lost' ? 'bg-rose-50 text-rose-600' :
+                              'bg-slate-50 text-slate-500' // Pending or Refunded
+                            }`}>
+                            {b.status === 'won' ? `Won` : b.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan={4} className="px-6 py-24 text-center text-slate-300 font-black uppercase text-xs tracking-widest italic opacity-50">No Bids Found</td></tr>
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            {activeTab === 'support' && (
               <div className="flex flex-col items-center justify-center py-24 opacity-30 select-none">
                 <History size={64} className="text-slate-200 mb-4" />
                 <p className="text-sm font-black text-slate-400 uppercase tracking-widest">No detailed records found</p>

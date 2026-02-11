@@ -107,6 +107,19 @@ export const userService = {
                 requestedAt: new Date(w.created_at || w.createdAt).toLocaleString(),
                 processedAt: w.updatedAt ? new Date(w.updatedAt).toLocaleString() : undefined,
                 rejectionReason: w.admin_remark
+            })),
+            bids: (response.data.data.bids || []).map((b: any) => ({
+                id: b.id.toString(),
+                userId: id,
+                userName: name,
+                gameName: b.market?.name || 'Unknown Market',
+                marketType: b.game_type?.name || 'Unknown Type',
+                digits: b.digit,
+                amount: parseFloat(b.amount),
+                multiplier: parseFloat(b.game_type?.rate || '0'),
+                session: b.session,
+                timestamp: new Date(b.createdAt).toLocaleTimeString(),
+                date: new Date(b.createdAt).toLocaleDateString()
             }))
         };
     }

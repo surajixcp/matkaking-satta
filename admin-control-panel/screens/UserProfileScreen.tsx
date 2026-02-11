@@ -102,6 +102,9 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
   // Filter specific user data
   const userTransactions = useMemo(() => transactions.filter(t => t.userId === user.id), [transactions, user.id]);
 
+  // Debug: Log user data to check if bank details are present
+  console.log('UserProfileScreen: User Data:', user);
+
   // Real Bank Info from user object
   const bankInfo = {
     holder: user.account_holder_name || 'Not provided',
@@ -226,8 +229,8 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
             <button
               onClick={handleToggleStatus}
               className={`px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all border shadow-lg active:scale-95 w-full lg:w-56 ${user.status === 'active'
-                  ? 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100'
-                  : 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100 shadow-emerald-600/10'
+                ? 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100'
+                : 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100 shadow-emerald-600/10'
                 }`}
             >
               {user.status === 'active' ? 'Block Access' : 'Restore Access'}
@@ -246,8 +249,8 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center space-x-2.5 px-6 py-3.5 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all duration-300 ${activeTab === tab.id
-                    ? 'bg-white text-indigo-600 shadow-xl shadow-slate-200/50 ring-1 ring-slate-100'
-                    : 'text-slate-400 hover:text-slate-900 hover:bg-white/50'
+                  ? 'bg-white text-indigo-600 shadow-xl shadow-slate-200/50 ring-1 ring-slate-100'
+                  : 'text-slate-400 hover:text-slate-900 hover:bg-white/50'
                   }`}
               >
                 <span className={`${activeTab === tab.id ? 'scale-110' : ''} transition-transform`}>

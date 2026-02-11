@@ -53,12 +53,11 @@ class MarketsService {
             let isOpen = false;
             if (m.status && m.is_open_for_betting) {
                 if (m.open_time <= m.close_time) {
-                    // Day market
-                    isOpen = currentTime >= m.open_time && currentTime < m.close_time;
+                    // Day market: Open until close time
+                    isOpen = currentTime < m.close_time;
                 } else {
-                    // Overnight market (e.g. opens 22:00, closes 05:00)
-                    // Open if time > open_time OR time < close_time
-                    isOpen = currentTime >= m.open_time || currentTime < m.close_time;
+                    // Overnight market: Always open (cycles daily)
+                    isOpen = true;
                 }
             }
 
@@ -127,6 +126,12 @@ class MarketsService {
         if (session === 'open') {
             return currentTime < market.open_time;
         } else if (session === 'close') {
+            // Check for overnight market (open > close)
+            if (market.open_time > market.close_time) {
+                // Overnight market close session is effectively always open
+                // (except maybe a small maintenance window, but for now allow always)
+                return true;
+            }
             return currentTime < market.close_time;
         }
 

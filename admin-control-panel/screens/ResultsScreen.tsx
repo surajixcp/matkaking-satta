@@ -110,7 +110,7 @@ const ResultsScreen: React.FC = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-in fade-in duration-300 h-[calc(100vh-100px)]">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-300 h-[calc(100vh-100px)]">
       {/* Left Column: Declare Form + Live Feed */}
       <div className="lg:col-span-1 flex flex-col gap-6 h-full overflow-hidden">
         {/* Declare Form */}
@@ -169,7 +169,7 @@ const ResultsScreen: React.FC = () => {
       </div>
 
       {/* Right Column: Result History */}
-      <div className="lg:col-span-3 h-full overflow-hidden">
+      <div className="lg:col-span-2 h-full overflow-hidden">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col">
           <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">

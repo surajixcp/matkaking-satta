@@ -91,7 +91,7 @@ async function getAllWithdrawals(req, res) {
 async function approveWithdrawal(req, res) {
     try {
         const { id } = req.params;
-        const { remark } = req.body;
+        const { remark } = req.body || {};
         const adminId = req.user.id;
 
         const withdraw = await withdrawService.approveWithdraw(
@@ -120,7 +120,7 @@ async function approveWithdrawal(req, res) {
 async function rejectWithdrawal(req, res) {
     try {
         const { id } = req.params;
-        const { remark } = req.body;
+        const { remark } = req.body || {};
         const adminId = req.user.id;
 
         const withdraw = await withdrawService.rejectWithdraw(

@@ -38,6 +38,13 @@ class MarketsService {
         });
     }
     /**
+     * Get market by ID
+     */
+    async getMarketById(id) {
+        return await Market.findByPk(id);
+    }
+
+    /**
      * Create a new market
      */
     async createMarket(data) {

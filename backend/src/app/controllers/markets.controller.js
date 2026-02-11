@@ -46,3 +46,25 @@ exports.deleteMarket = async (req, res, next) => {
         next(error);
     }
 };
+
+exports.checkStatus = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { session } = req.query;
+        const market = await marketsService.getMarketById(id); // Need to ensure this exists or use findByPk
+        const isOpen = await marketsService.isMarketOpen(id, session || 'open');
+        const currentTime = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour12: false });
+
+        res.json({
+            success: true,
+            data: {
+                market,
+                currentTime,
+                session,
+                isOpen
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};

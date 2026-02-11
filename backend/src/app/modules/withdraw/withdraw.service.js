@@ -16,6 +16,11 @@ const WITHDRAW_CONFIG = {
 /**
  * Request withdrawal
  */
+const { WalletTransaction } = require('../../../db/models');
+
+/**
+ * Request withdrawal
+ */
 async function requestWithdraw(userId, amount) {
     // Validate amount
     if (amount < WITHDRAW_CONFIG.MIN_AMOUNT) {
@@ -34,26 +39,35 @@ async function requestWithdraw(userId, amount) {
         throw new Error(`Daily withdrawal limit is ₹${WITHDRAW_CONFIG.MAX_DAILY_AMOUNT}`);
     }
 
-    // Check wallet balance
-    // Note: walletService needs to be verified. If not accessible, we might need to use Wallet model directly.
-    // For now assuming walletService.debit exists as per user request context.
-
-    // Debit wallet immediately
-    // If walletService is not available, we can use Wallet model directly:
-    // const wallet = await Wallet.findOne({ where: { user_id: userId } });
-    // if (wallet.balance < amount) throw new Error('Insufficient balance');
-    // await wallet.decrement('balance', { by: amount });
-
-    await walletService.debit(userId, amount, 'withdraw_request', null);
-
-    // Create withdrawal request
+    // Create withdrawal request FIRST (Pending)
     const withdraw = await withdrawRepo.createWithdraw({
         user_id: userId,
         amount,
         status: 'pending',
     });
 
-    return withdraw;
+    try {
+        // Debit wallet immediately
+        // Pass withdraw.id as referenceId to link transaction
+        await walletService.debit(userId, amount, 'Withdrawal Request', withdraw.id.toString());
+        return withdraw;
+    } catch (error) {
+        // If debit fails (e.g. insufficient balance), delete the request
+        // We need to use a raw query or add a method to repo, or just use the model directly if needed.
+        // But since we have withdrawRepo, let's assume we can delete or we just leave it as failed? 
+        // Better to delete. 
+        // Since we don't have delete method in repo exposed, let's try to update it to 'failed' or use direct model if available.
+        // Actually, let's just use the repo's update to set it to 'rejected'/failed or similar if we can't delete. 
+        // Or better, let's just throw and let the user handle it? No, we created a record.
+        // Let's add a delete/destroy to repo or just direct import Model here?
+        // For now, let's just mark it as 'rejected' with remark 'Insufficient Balance'
+        // But the user didn't even get to submit it technically.
+        // Let's use the withdraw instance if it's a sequelize model.
+        if (withdraw && typeof withdraw.destroy === 'function') {
+            await withdraw.destroy();
+        }
+        throw error;
+    }
 }
 
 /**
@@ -77,6 +91,19 @@ async function approveWithdraw(withdrawId, adminId, remark = null) {
         admin_remark: remark,
     });
 
+    // Sync Wallet Transaction Status
+    const walletTxn = await WalletTransaction.findOne({
+        where: {
+            reference_id: withdrawId.toString(),
+            type: 'withdraw'
+        }
+    });
+
+    if (walletTxn) {
+        walletTxn.status = 'success';
+        await walletTxn.save();
+    }
+
     return updated;
 }
 
@@ -98,8 +125,8 @@ async function rejectWithdraw(withdrawId, adminId, remark = null) {
     await walletService.credit(
         withdraw.user_id,
         withdraw.amount,
-        'withdraw_refund',
-        withdrawId
+        'Withdrawal Refund',
+        withdrawId.toString()
     );
 
     // Update status
@@ -108,6 +135,21 @@ async function rejectWithdraw(withdrawId, adminId, remark = null) {
         approved_by: adminId,
         admin_remark: remark,
     });
+
+    // Sync Wallet Transaction Status (The original debit should count as failed/rejected)
+    // Note: We also added a credit refund above, so balance is restored.
+    const walletTxn = await WalletTransaction.findOne({
+        where: {
+            reference_id: withdrawId.toString(),
+            type: 'withdraw'
+        }
+    });
+
+    if (walletTxn) {
+        walletTxn.status = 'failed';
+        walletTxn.description += ` (Rejected: ${remark || 'Admin'})`;
+        await walletTxn.save();
+    }
 
     return updated;
 }

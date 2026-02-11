@@ -11,7 +11,10 @@ module.exports = (sequelize) => {
         market_id: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            references: { model: 'Markets', key: 'id' }
+            references: {
+                model: 'Markets',
+                key: 'id'
+            }
         },
         date: {
             type: DataTypes.DATEONLY,
@@ -27,8 +30,9 @@ module.exports = (sequelize) => {
         }
     }, {
         sequelize,
-        modelName: 'Result',
+        modelName: 'Result', // Assuming original name was 'Result'
         tableName: 'Results',
+        timestamps: true
     });
 
     return Result;

@@ -137,6 +137,10 @@ initDatabase().then(() => {
         // Start OTP cleanup cron
         const { startOTPCleanupCron } = require('./cron/cleanup-otp.cron');
         startOTPCleanupCron();
+
+        // Start DPBoss Result Fetcher Cron
+        const startResultFetcher = require('./cron/fetch-results.cron');
+        startResultFetcher();
     });
 });
 

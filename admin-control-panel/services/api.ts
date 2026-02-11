@@ -63,7 +63,12 @@ export const userService = {
                 phone: user.phone,
                 balance: parseFloat(user.wallet?.balance || '0'),
                 status: user.status,
-                joinedAt: new Date(user.createdAt || user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                joinedAt: new Date(user.createdAt || user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                bank_name: user.bank_name,
+                account_number: user.account_number,
+                ifsc_code: user.ifsc_code,
+                account_holder_name: user.account_holder_name,
+                upi_id: user.upi_id
             }));
 
             return { users: mappedUsers, total, totalPages, currentPage };

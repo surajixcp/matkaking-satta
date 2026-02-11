@@ -3,9 +3,36 @@ const { Op } = require('sequelize');
 
 class MarketsService {
     /**
+     * Seed game types if empty
+     */
+    async seedGameTypes() {
+        const count = await GameType.count();
+        if (count === 0) {
+            const gameTypes = [
+                { name: 'Single Digit', key: 'single_digit', rate: 9.5 },
+                { name: 'Jodi Digit', key: 'jodi_digit', rate: 95.0 },
+                { name: 'Single Patti', key: 'single_patti', rate: 150.0 },
+                { name: 'Double Patti', key: 'double_patti', rate: 300.0 },
+                { name: 'Triple Patti', key: 'triple_patti', rate: 700.0 },
+                { name: 'Half Sangam', key: 'half_sangam', rate: 1000.0 },
+                { name: 'Full Sangam', key: 'full_sangam', rate: 10000.0 }
+            ];
+            await GameType.bulkCreate(gameTypes);
+            return { seeded: true, count: gameTypes.length };
+        }
+        return { seeded: false, count };
+    }
+
+    /**
      * Get all Game Types
      */
     async getGameTypes() {
+        // Auto-seed if empty (fallback)
+        const count = await GameType.count();
+        if (count === 0) {
+            await this.seedGameTypes();
+        }
+
         return await GameType.findAll({
             order: [['id', 'ASC']]
         });

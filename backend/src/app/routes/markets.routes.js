@@ -6,7 +6,6 @@ const { protect, authorize } = require('../middlewares/auth.middleware');
 // Public request to see markets
 router.get('/', marketsController.getMarkets);
 router.get('/:id/game-types', marketsController.getGameTypes);
-router.get('/:id/status', marketsController.checkStatus);
 
 // Admin only routes
 router.post('/', protect, authorize('admin'), marketsController.createMarket);

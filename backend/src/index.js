@@ -131,16 +131,21 @@ initDatabase().then(() => {
     httpServer.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
         console.log(`[DEBUG] Backend Server Restarted at ${new Date().toISOString()}`);
-        resultFetcherService.init(); // Start Cron Jobs
-        startHeartbeat(); // Start DB heartbeat to prevent sleep
 
-        // Start OTP cleanup cron
-        const { startOTPCleanupCron } = require('./cron/cleanup-otp.cron');
-        startOTPCleanupCron();
+        // Delay cron jobs to ensure server is fully up and ready to handle requests
+        setTimeout(() => {
+            console.log('⏰ Starting Cron Jobs...');
+            resultFetcherService.init(); // Start Cron Jobs
+            startHeartbeat(); // Start DB heartbeat to prevent sleep
 
-        // Start DPBoss Result Fetcher Cron
-        const startResultFetcher = require('./cron/fetch-results.cron');
-        startResultFetcher();
+            // Start OTP cleanup cron
+            const { startOTPCleanupCron } = require('./cron/cleanup-otp.cron');
+            startOTPCleanupCron();
+
+            // Start DPBoss Result Fetcher Cron
+            const startResultFetcher = require('./cron/fetch-results.cron');
+            startResultFetcher();
+        }, 10000); // 10 second delay
     });
 });
 

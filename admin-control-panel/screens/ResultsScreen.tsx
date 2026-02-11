@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { DeclaredResult } from '../types';
 import { marketService, resultService } from '../services/api';
+import ScrapedResultsTable from '../components/ScrapedResultsTable';
 
 const ResultsScreen: React.FC = () => {
   const [markets, setMarkets] = useState<any[]>([]);
@@ -109,23 +110,25 @@ const ResultsScreen: React.FC = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-300">
-      <div className="lg:col-span-1">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm sticky top-20">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-in fade-in duration-300 h-[calc(100vh-100px)]">
+      {/* Left Column: Declare Form + Live Feed */}
+      <div className="lg:col-span-1 flex flex-col gap-6 h-full overflow-hidden">
+        {/* Declare Form */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm shrink-0">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-indigo-600/10 text-indigo-600 rounded-xl flex items-center justify-center"><Trophy size={20} /></div>
             <div>
               <h3 className="text-base font-bold text-slate-900">Declare Result</h3>
-              <p className="text-xs text-slate-500 font-medium">Broadcast results to all users</p>
+              <p className="text-xs text-slate-500 font-medium">Broadcast results</p>
             </div>
           </div>
-          <form onSubmit={handleDeclare} className="space-y-5">
+          <form onSubmit={handleDeclare} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-500 mb-1.5">Select Market</label>
               <select
                 value={selectedMarketId}
                 onChange={(e) => setSelectedMarketId(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl text-sm font-bold text-slate-800 outline-none appearance-none cursor-pointer focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-sm font-bold text-slate-800 outline-none appearance-none cursor-pointer focus:ring-2 focus:ring-indigo-500/20 transition-all"
               >
                 {markets.map(m => (
                   <option key={m.id} value={m.id}>{m.name}</option>
@@ -158,20 +161,27 @@ const ResultsScreen: React.FC = () => {
             </button>
           </form>
         </div>
+
+        {/* Live Scraper Feed */}
+        <div className="flex-1 min-h-0">
+          <ScrapedResultsTable />
+        </div>
       </div>
-      <div className="lg:col-span-2 space-y-4">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[500px]">
-          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+
+      {/* Right Column: Result History */}
+      <div className="lg:col-span-3 h-full overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-slate-100 text-slate-500 rounded-lg"><History size={16} /></div>
               <h3 className="text-sm font-bold text-slate-900">Result History</h3>
             </div>
             <button onClick={loadHistory} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"><RefreshCw size={16} /></button>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-auto flex-1">
             <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50 text-slate-500 text-xs font-semibold border-b border-slate-100">
+              <thead className="sticky top-0 bg-slate-50">
+                <tr className="text-slate-500 text-xs font-semibold border-b border-slate-100">
                   <th className="px-6 py-3">Market Details</th>
                   <th className="px-6 py-3">Result</th>
                   <th className="px-6 py-3">Date</th>

@@ -277,4 +277,11 @@ export const settingsService = {
     update: (data: any) => api.put('/settings', data),
 };
 
+export const scraperService = {
+    getRecent: async () => {
+        const response = await api.get('/scraper/results');
+        return response.data.data;
+    }
+};
+
 export default api;

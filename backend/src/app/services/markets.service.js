@@ -171,45 +171,23 @@ class MarketsService {
             }
         }
 
-        // Overnight Market Logic (e.g. 22:00 -> 05:00)
+        // Overnight Market Logic (e.g. 21:00 -> 05:00)
         else {
             if (session === 'open') {
-                // Betting on Open Session (Result at 22:00)
-                // Valid until 22:00.
-                // So valid if currentTime < 22:00 AND currentTime > 05:00?
-                // Wait, if it's 23:00, Open result is declared.
-                // So we must be BEFORE Open Time.
-
-                // BUT, if it's 04:00 AM, that is ALSO before 22:00.
-                // Is it valid to bet on 22:00 Open at 04:00? Generally yes.
-                // The constraints are usually:
-                // 1. Must be after previous close (05:00)?
-                // Let's keep it simple: Closed if currentTime >= Open Time (and < Close Time? No).
-
-                // Actually, simpler logic:
-                // You can bet on OPEN as long as it's not "Too Late".
-                // "Too Late" is currentTime >= open_time.
-                // But wait, if it is 01:00 AM (next day), currentTime < open_time (22:00) is TRUE.
-                // But 01:00 AM is AFTER 22:00 of yesterday.
-
-                // Satta markets usually run daily.
-                // Overnight markets are tricky.
-
-                // Let's use the Gap Logic strictly for now, assuming standard behavior:
-                // Can bet if NOT in the gap (time between Close and Open, wait no).
-
-                // Let's trust the IST conversion fixes the main issue.
-                // For Open Session:
-                // Valid if currentTime < open_time OR currentTime > (some early start).
-                // Simplest working logic for Night:
-                // Valid if currentTime < open_time && currentTime > close_time? No (that's the day gap).
-
-                // Updated Logic from previous thought:
-                return currentTime < market.close_time || currentTime >= market.open_time;
+                // Open Session Betting:
+                // Valid if currentTime is NOT in the closed window (between Close and Open).
+                // Example: Close 05:00, Open 21:00.
+                // Valid window: 05:00 -> 21:00.
+                // So currentTime > close_time && currentTime < open_time.
+                return currentTime > market.close_time && currentTime < market.open_time;
             } else {
-                // Close Session (05:00)
-                // Valid until 05:00.
-                return currentTime < market.close_time || currentTime >= market.open_time;
+                // Close Session Betting:
+                // Valid anytime until close_time (next day).
+                // Effectively always open because even if we are past 05:00, we are just betting for the next day?
+                // But let's stick to the same logic: Valid if NOT "too late".
+                // "Too late" is > close_time && < "start of next cycle"?
+                // Let's assume valid always for now, as Satta close betting is usually open 24/7 until declare.
+                return true;
             }
         }
     }

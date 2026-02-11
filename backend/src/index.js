@@ -72,8 +72,16 @@ async function initDatabase() {
                 ADD COLUMN IF NOT EXISTS "admin_remark" VARCHAR(255);
             `);
             console.log('✅ Withdrawal columns ready');
+
+            console.log('🔄 Checking User bank columns...');
+            await sequelize.query(`ALTER TABLE "Users" ADD COLUMN IF NOT EXISTS "bank_name" VARCHAR(255);`);
+            await sequelize.query(`ALTER TABLE "Users" ADD COLUMN IF NOT EXISTS "account_number" VARCHAR(255);`);
+            await sequelize.query(`ALTER TABLE "Users" ADD COLUMN IF NOT EXISTS "ifsc_code" VARCHAR(255);`);
+            await sequelize.query(`ALTER TABLE "Users" ADD COLUMN IF NOT EXISTS "account_holder_name" VARCHAR(255);`);
+            await sequelize.query(`ALTER TABLE "Users" ADD COLUMN IF NOT EXISTS "upi_id" VARCHAR(255);`);
+            console.log('✅ User bank columns ready');
         } catch (colError) {
-            console.log('⚠️  Withdrawal columns check:', colError.message);
+            console.log('⚠️  Column check error:', colError.message);
         }
 
         // Seed admin user if not exists

@@ -71,6 +71,28 @@ module.exports = (sequelize) => {
             type: DataTypes.STRING,
             allowNull: true,
             unique: true
+        },
+        // Bank Details
+        bank_name: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        account_number: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        ifsc_code: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        account_holder_name: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        // UPI Details
+        upi_id: {
+            type: DataTypes.STRING,
+            allowNull: true
         }
     }, {
         sequelize,

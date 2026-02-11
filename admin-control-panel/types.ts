@@ -21,6 +21,11 @@ export interface UserData {
   balance: number;
   status: 'active' | 'blocked';
   joinedAt: string;
+  bank_name?: string;
+  account_number?: string;
+  ifsc_code?: string;
+  account_holder_name?: string;
+  upi_id?: string;
 }
 
 export interface Market {

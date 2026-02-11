@@ -237,6 +237,24 @@ class AuthService {
 
         return { success: true, message: 'MPIN updated successfully' };
     }
+
+    /**
+     * Update Bank Details
+     */
+    async updateBankDetails(userId, bankData) {
+        const user = await User.findByPk(userId);
+        if (!user) throw new Error('User not found');
+
+        // Update fields
+        if (bankData.bank_name !== undefined) user.bank_name = bankData.bank_name;
+        if (bankData.account_number !== undefined) user.account_number = bankData.account_number;
+        if (bankData.ifsc_code !== undefined) user.ifsc_code = bankData.ifsc_code;
+        if (bankData.account_holder_name !== undefined) user.account_holder_name = bankData.account_holder_name;
+        if (bankData.upi_id !== undefined) user.upi_id = bankData.upi_id;
+
+        await user.save();
+        return user;
+    }
 }
 
 module.exports = new AuthService();

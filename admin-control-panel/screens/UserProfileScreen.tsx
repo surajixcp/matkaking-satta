@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  ArrowLeft, Wallet, History, FileText, CreditCard, 
+import {
+  ArrowLeft, Wallet, History, FileText, CreditCard,
   HelpCircle, ShieldAlert, CheckCircle2, X, AlertCircle, Trash2,
   TrendingUp, Landmark, MessageSquare, ShieldCheck, UserX,
   Calendar
@@ -60,27 +60,27 @@ const WalletAdjustModal: React.FC<{
           </div>
           <div>
             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 text-center">Amount (INR)</label>
-            <input 
-              type="number" 
-              autoFocus 
-              value={amount} 
-              onChange={(e) => setAmount(e.target.value)} 
-              className="w-full bg-slate-50 border border-slate-200 px-4 py-5 rounded-2xl text-4xl font-black text-slate-900 focus:ring-4 focus:ring-indigo-500/10 outline-none text-center placeholder:text-slate-200" 
-              placeholder="0.00" 
+            <input
+              type="number"
+              autoFocus
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 px-4 py-5 rounded-2xl text-4xl font-black text-slate-900 focus:ring-4 focus:ring-indigo-500/10 outline-none text-center placeholder:text-slate-200"
+              placeholder="0.00"
             />
           </div>
         </div>
         <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-4">
-          <button 
-            disabled={isProcessing || !amount} 
-            onClick={() => handleAction('deduct')} 
+          <button
+            disabled={isProcessing || !amount}
+            onClick={() => handleAction('deduct')}
             className="flex-1 bg-white border border-rose-200 text-rose-600 font-black py-4 rounded-2xl hover:bg-rose-50 transition-all active:scale-95 disabled:opacity-50"
           >
             Deduct
           </button>
-          <button 
-            disabled={isProcessing || !amount} 
-            onClick={() => handleAction('add')} 
+          <button
+            disabled={isProcessing || !amount}
+            onClick={() => handleAction('add')}
             className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl hover:bg-indigo-500 shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center active:scale-95 disabled:opacity-50"
           >
             {isProcessing ? (
@@ -101,14 +101,14 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
 
   // Filter specific user data
   const userTransactions = useMemo(() => transactions.filter(t => t.userId === user.id), [transactions, user.id]);
-  
-  // Dummy Bank Info for visuals
+
+  // Real Bank Info from user object
   const bankInfo = {
-    holder: user.name,
-    bank: 'State Bank of India',
-    account: 'XXXX-XXXX-8890',
-    ifsc: 'SBIN0001234',
-    upi: `${user.phone.replace(/[^0-9]/g, '')}@paytm`
+    holder: user.account_holder_name || 'Not provided',
+    bank: user.bank_name || 'Not provided',
+    account: user.account_number || 'Not provided',
+    ifsc: user.ifsc_code || 'Not provided',
+    upi: user.upi_id || 'Not provided'
   };
 
   const tabs = [
@@ -143,7 +143,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
       status: 'success',
       method: 'Admin Panel Direct'
     };
-    
+
     setTransactions(prev => [newTxn, ...prev]);
     onUpdateUser({ ...user, balance: Math.max(0, user.balance + amount) });
   };
@@ -151,8 +151,8 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
   return (
     <div className="max-w-[1400px] mx-auto space-y-4 sm:space-y-6 animate-in fade-in duration-500">
       {/* Back Button */}
-      <button 
-        onClick={onBack} 
+      <button
+        onClick={onBack}
         className="flex items-center space-x-2 text-slate-500 hover:text-indigo-600 transition-colors font-bold group px-2"
       >
         <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
@@ -217,19 +217,18 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 w-full lg:w-auto mt-4 lg:mt-0">
-            <button 
-              onClick={() => setIsAdjustModalOpen(true)} 
+            <button
+              onClick={() => setIsAdjustModalOpen(true)}
               className="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-indigo-500 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all w-full lg:w-56"
             >
               Adjust Wallet
             </button>
-            <button 
-              onClick={handleToggleStatus} 
-              className={`px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all border shadow-lg active:scale-95 w-full lg:w-56 ${
-                user.status === 'active' 
-                ? 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100' 
-                : 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100 shadow-emerald-600/10'
-              }`}
+            <button
+              onClick={handleToggleStatus}
+              className={`px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all border shadow-lg active:scale-95 w-full lg:w-56 ${user.status === 'active'
+                  ? 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-100'
+                  : 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100 shadow-emerald-600/10'
+                }`}
             >
               {user.status === 'active' ? 'Block Access' : 'Restore Access'}
             </button>
@@ -243,14 +242,13 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
         <div className="border-b border-slate-100 overflow-x-auto no-scrollbar bg-slate-50/30">
           <div className="flex min-w-max p-2 sm:p-4 gap-2">
             {tabs.map((tab) => (
-              <button 
-                key={tab.id} 
-                onClick={() => setActiveTab(tab.id)} 
-                className={`flex items-center space-x-2.5 px-6 py-3.5 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all duration-300 ${
-                  activeTab === tab.id 
-                  ? 'bg-white text-indigo-600 shadow-xl shadow-slate-200/50 ring-1 ring-slate-100' 
-                  : 'text-slate-400 hover:text-slate-900 hover:bg-white/50'
-                }`}
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center space-x-2.5 px-6 py-3.5 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all duration-300 ${activeTab === tab.id
+                    ? 'bg-white text-indigo-600 shadow-xl shadow-slate-200/50 ring-1 ring-slate-100'
+                    : 'text-slate-400 hover:text-slate-900 hover:bg-white/50'
+                  }`}
               >
                 <span className={`${activeTab === tab.id ? 'scale-110' : ''} transition-transform`}>
                   {React.cloneElement(tab.icon as React.ReactElement<any>, { size: 16 })}
@@ -285,9 +283,8 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
                           </div>
                         </td>
                         <td className="px-4 sm:px-6 py-4 sm:py-5">
-                          <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
-                            txn.type === 'deposit' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'
-                          }`}>
+                          <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${txn.type === 'deposit' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'
+                            }`}>
                             {txn.type}
                           </span>
                         </td>
@@ -295,8 +292,8 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
                           {txn.type === 'deposit' ? '+' : '-'}₹{txn.amount.toLocaleString()}
                         </td>
                         <td className="px-4 sm:px-6 py-4 sm:py-5 text-right">
-                          <button 
-                            onClick={() => handleDeleteTransaction(txn.id)} 
+                          <button
+                            onClick={() => handleDeleteTransaction(txn.id)}
                             className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
                           >
                             <Trash2 size={16} />
@@ -355,11 +352,11 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
       </div>
 
       {/* Adjust Modal */}
-      <WalletAdjustModal 
-        isOpen={isAdjustModalOpen} 
-        user={user} 
-        onClose={() => setIsAdjustModalOpen(false)} 
-        onConfirm={handleConfirmAdjustment} 
+      <WalletAdjustModal
+        isOpen={isAdjustModalOpen}
+        user={user}
+        onClose={() => setIsAdjustModalOpen(false)}
+        onConfirm={handleConfirmAdjustment}
       />
     </div>
   );

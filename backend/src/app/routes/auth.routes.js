@@ -13,5 +13,6 @@ const { protect } = require('../middlewares/auth.middleware');
 router.post('/profile-pic', protect, upload.single('image'), authController.updateProfilePic);
 router.delete('/profile-pic', protect, authController.removeProfilePic);
 router.post('/change-mpin', protect, authController.changeMpin);
+router.post('/bank-details', protect, authController.updateBankDetails);
 
 module.exports = router;

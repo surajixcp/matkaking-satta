@@ -120,3 +120,20 @@ exports.changeMpin = async (req, res, next) => {
         next(error);
     }
 };
+
+exports.updateBankDetails = async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+        const bankData = req.body; // { bank_name, account_number, ifsc_code, account_holder_name, upi_id }
+
+        const user = await authService.updateBankDetails(userId, bankData);
+
+        res.status(200).json({
+            success: true,
+            message: 'Bank details updated successfully',
+            data: user
+        });
+    } catch (error) {
+        next(error);
+    }
+};

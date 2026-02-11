@@ -13,7 +13,10 @@ const api = axios.create({
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('admin_token');
+        console.log('[API] Request to:', config.url);
+        console.log('[API] Token present:', !!token);
         if (token) {
+            console.log('[API] Token (first 20 chars):', token.substring(0, 20) + '...');
             config.headers['Authorization'] = `Bearer ${token}`;
         }
         return config;

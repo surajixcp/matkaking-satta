@@ -11,20 +11,27 @@ exports.protect = async (req, res, next) => {
         token = req.headers.authorization.split(' ')[1];
     }
 
+    console.log('[Auth Middleware] Token present:', !!token);
+
     if (!token) {
+        console.log('[Auth Middleware] No token provided');
         return res.status(401).json({ success: false, error: 'Not authorized to access this route' });
     }
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log('[Auth Middleware] Token decoded, user ID:', decoded.id);
         req.user = await User.findByPk(decoded.id);
 
         if (!req.user) {
+            console.log('[Auth Middleware] User not found for ID:', decoded.id);
             return res.status(401).json({ success: false, error: 'User not found with this id' });
         }
 
+        console.log('[Auth Middleware] User found:', req.user.id, req.user.role);
         next();
     } catch (error) {
+        console.log('[Auth Middleware] Token verification failed:', error.message);
         return res.status(401).json({ success: false, error: 'Not authorized token failed' });
     }
 };

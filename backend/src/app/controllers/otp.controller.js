@@ -35,46 +35,46 @@ exports.generateOTP = async (req, res) => {
             expires_at: expiresAt
         });
 
-        // Send SMS via Twilio if crendentials are present
-        const accountSid = process.env.TWILIO_ACCOUNT_SID;
-        const authToken = process.env.TWILIO_AUTH_TOKEN;
-        const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
+        // Send SMS via Fast2SMS
+        const fast2sms = require('../services/fast2sms.service');
 
-        if (accountSid && authToken && twilioPhone && accountSid !== 'your_twilio_account_sid') {
-            try {
-                const client = require('twilio')(accountSid, authToken);
-                await client.messages.create({
-                    body: `Your King Matka OTP is: ${otpCode}`,
-                    from: twilioPhone,
-                    to: `+91${phone}` // Assuming Indian numbers for now, or ensure phone has country code
-                });
-                console.log(`[Twilio SMS] Sent OTP ${otpCode} to ${phone}`);
+        try {
+            const result = await fast2sms.sendOTP(phone, otpCode);
+
+            if (result.isMock) {
+                // Development mode - Fast2SMS not configured
+                console.log(`[MOCK SMS] OTP for ${phone} is: ${otpCode}`);
                 res.send({
                     data: {
-                        message: "OTP sent successfully via SMS",
+                        message: "OTP sent successfully (Mock - Configure Fast2SMS for production)",
+                        isMock: true
                     }
                 });
-            } catch (twilioError) {
-                console.error("Twilio Error:", twilioError);
-                // Fallback to mock/log if Twilio fails (e.g. unverified number in trial)
-                console.log(`[MOCK SMS - Fallback] OTP for ${phone} is: ${otpCode}`);
+            } else if (result.success) {
+                // Fast2SMS sent successfully
                 res.send({
                     data: {
-                        // Include error message for debugging
-                        message: `Twilio Error: ${twilioError.message}. OTP (Mock): ${otpCode}`,
+                        message: "OTP sent successfully via SMS"
+                    }
+                });
+            } else {
+                // Fast2SMS failed but didn't throw error
+                console.log(`[Fast2SMS Warning] ${result.message}. OTP (Mock): ${otpCode}`);
+                res.send({
+                    data: {
+                        message: `SMS service issue: ${result.message}. OTP (Mock): ${otpCode}`,
                         isFallback: true
                     }
                 });
             }
-        } else {
-            // Mock Send SMS - In production replace with actual SMS provider call
-            console.log(`[MOCK SMS] OTP for ${phone} is: ${otpCode}`);
-
+        } catch (smsError) {
+            console.error("Fast2SMS Error:", smsError.message);
+            // Return success but log the OTP for development
+            console.log(`[MOCK SMS - Fallback] OTP for ${phone} is: ${otpCode}`);
             res.send({
                 data: {
-                    message: "OTP sent successfully (Mock)",
-                    // In dev mode/test, maybe return OTP for easier testing if needed, but safer to just log it
-                    // otp: otpCode // Uncomment for easier debugging if requested
+                    message: `SMS Error: ${smsError.message}. OTP saved (check logs)`,
+                    isFallback: true
                 }
             });
         }

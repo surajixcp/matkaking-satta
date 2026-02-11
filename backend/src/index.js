@@ -133,6 +133,10 @@ initDatabase().then(() => {
         console.log(`[DEBUG] Backend Server Restarted at ${new Date().toISOString()}`);
         resultFetcherService.init(); // Start Cron Jobs
         startHeartbeat(); // Start DB heartbeat to prevent sleep
+
+        // Start OTP cleanup cron
+        const { startOTPCleanupCron } = require('./cron/cleanup-otp.cron');
+        startOTPCleanupCron();
     });
 });
 

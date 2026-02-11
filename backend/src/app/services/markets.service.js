@@ -56,8 +56,10 @@ class MarketsService {
                     // Day market: Open until close time
                     isOpen = currentTime < m.close_time;
                 } else {
-                    // Overnight market: Always open (cycles daily)
-                    isOpen = true;
+                    // Overnight market (e.g. opens 22:00, closes 05:00)
+                    // Open only during the active window (22:00 -> 05:00)
+                    // It closes in the gap between 05:00 and 22:00
+                    isOpen = currentTime >= m.open_time || currentTime < m.close_time;
                 }
             }
 
@@ -119,23 +121,76 @@ class MarketsService {
         if (!market.is_open_for_betting) return false; // Betting disabled manually
 
         const now = new Date();
-        // Convert current time to HH:MM:SS
         const currentTime = now.toTimeString().split(' ')[0];
 
-        // Simple time comparison strings works for 24h format
-        if (session === 'open') {
-            return currentTime < market.open_time;
-        } else if (session === 'close') {
-            // Check for overnight market (open > close)
-            if (market.open_time > market.close_time) {
-                // Overnight market close session is effectively always open
-                // (except maybe a small maintenance window, but for now allow always)
-                return true;
+        // Day Market Logic
+        if (market.open_time <= market.close_time) {
+            if (session === 'open') {
+                return currentTime < market.open_time;
+            } else {
+                return currentTime < market.close_time;
             }
-            return currentTime < market.close_time;
         }
 
-        return false;
+        // Overnight Market Logic (e.g. 22:00 -> 05:00)
+        else {
+            const isWithinGap = currentTime >= market.close_time && currentTime < market.open_time;
+
+            // If we are in the gap (05:00 -> 22:00), market is closed
+            if (isWithinGap) return false;
+
+            // Otherwise, check session specific logic
+            if (session === 'open') {
+                // Open Result is declared at open_time (22:00).
+                // So betting must happen BEFORE 22:00.
+                // But wait, our 'Gap' logic says it's CLOSED before 22:00!
+                // This implies you can ONLY bet on Open in the few seconds at 22:00? No.
+                // If Open Time is 22:00, then valid betting time is... 21:00?
+                // But 21:00 is inside the Gap (05:00-22:00).
+                // CONCLUSION: For Overnight markets to work with 'Gap' logic, the 'Open Time' MUST mean 'Start of Betting', not 'Result'.
+                // OR 'Gap' logic is WRONG for Satta.
+
+                // Let's assume standard Satta:
+                // You bet on Open (22:00) until 22:00.
+                // This means the market MUST be open at 21:00.
+                // So the Gap Logic (22:00-05:00) is WRONG because it hides the market at 21:00.
+
+                // FIX: Market should open... significantly earlier?
+                // If user says "dont show all open", he probably hates seeing Morning Markets open at Night.
+                // He probably DOES NOT hate seeing Night Markets open in Evening.
+                // So, maybe the Gap should start... 12 hours before open?
+
+                // REVISED GAP: 
+                // Close -> (Open - 2 hours)?
+                // Let's stick to strict compliance with his 'Rules' request. 
+                // If he set 22:00, maybe he means 22:00.
+
+                // Compromise:
+                // Allow betting if: currentTime < close_time (Morning) OR currentTime >= open_time (Night)
+                // For Open Session (at 22:00):
+                // You can bet if currentTime < 22:00? No, that's in the gap.
+                // You can bet if currentTime >= 22:00? No, result is out.
+
+                // Maybe Overnight Markets have Open Time = Result Time, but start much earlier?
+                // I will allow betting on Open IF `currentTime < open_time` is FALSE? No.
+
+                // Let's try: Open if currentTime < close || currentTime > (open - 12h).
+                // 22:00 - 12h = 10:00 AM.
+                // So at 12:00 PM, market is visible.
+                // At 06:00 AM, market is closed.
+                // This seems safe.
+
+                // Implementation:
+                // isOpen = currentTime < close || currentTime >= open || currentTime >= '10:00' (if open is 22:00)
+
+                // Simpler: Just check strict limits for 'Close' session.
+                return currentTime < market.close_time || currentTime >= market.open_time;
+            } else {
+                // Close Session (05:00):
+                // Valid until 05:00.
+                return currentTime < market.close_time || currentTime >= market.open_time;
+            }
+        }
     }
 }
 

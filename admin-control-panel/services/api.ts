@@ -80,6 +80,35 @@ export const userService = {
     updateStatus: async (id: string, status: string) => {
         const response = await api.put(`/admin/users/${id}/status`, { status });
         return response.data.data;
+    },
+    getUserHistory: async (id: string, name: string = 'Unknown') => {
+        const response = await api.get(`/admin/users/${id}/history`);
+        const { transactions, withdrawals } = response.data.data;
+
+        return {
+            transactions: transactions.map((t: any) => ({
+                id: `${t.id}`,
+                user: name,
+                userId: id,
+                type: t.type,
+                amount: parseFloat(t.amount),
+                date: new Date(t.created_at || t.createdAt).toLocaleString(),
+                status: t.status || 'success',
+                method: t.description || 'Wallet' // Use description or default
+            })),
+            withdrawals: withdrawals.map((w: any) => ({
+                id: w.id.toString(),
+                userId: id,
+                userName: name,
+                amount: parseFloat(w.amount),
+                status: w.status,
+                method: 'UPI',
+                details: w.bank_details || {},
+                requestedAt: new Date(w.created_at || w.createdAt).toLocaleString(),
+                processedAt: w.updatedAt ? new Date(w.updatedAt).toLocaleString() : undefined,
+                rejectionReason: w.admin_remark
+            }))
+        };
     }
 };
 

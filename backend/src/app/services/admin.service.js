@@ -92,6 +92,29 @@ class AdminService {
             order: [['created_at', 'ASC']]
         });
     }
+
+    /**
+     * Get user history (transactions and withdrawals)
+     */
+    async getUserHistory(userId) {
+        const user = await User.findByPk(userId, {
+            include: [{ model: Wallet, as: 'wallet' }]
+        });
+
+        if (!user) throw new Error('User not found');
+
+        const transactions = await Transaction.findAll({
+            where: { wallet_id: user.wallet.id },
+            order: [['created_at', 'DESC']]
+        });
+
+        const withdrawals = await WithdrawRequest.findAll({
+            where: { user_id: userId },
+            order: [['created_at', 'DESC']]
+        });
+
+        return { transactions, withdrawals };
+    }
 }
 
 module.exports = new AdminService();

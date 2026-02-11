@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft, Wallet, History, FileText, CreditCard,
   HelpCircle, ShieldAlert, CheckCircle2, X, AlertCircle, Trash2,
@@ -6,6 +6,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { UserData, Transaction, Bid, WithdrawalRequest } from '../types';
+import { userService } from '../services/api';
 
 interface UserProfileScreenProps {
   user: UserData;
@@ -98,12 +99,43 @@ const WalletAdjustModal: React.FC<{
 const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transactions, setTransactions, onUpdateUser, onBack }) => {
   const [activeTab, setActiveTab] = useState('wallet');
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [historyWithdrawals, setHistoryWithdrawals] = useState<WithdrawalRequest[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Filter specific user data
   const userTransactions = useMemo(() => transactions.filter(t => t.userId === user.id), [transactions, user.id]);
 
   // Debug: Log user data to check if bank details are present
   console.log('UserProfileScreen: User Data:', user);
+
+  // Fetch User History
+  useEffect(() => {
+    let isMounted = true;
+    const fetchHistory = async () => {
+      setIsLoadingHistory(true);
+      try {
+        const { transactions: txns, withdrawals } = await userService.getUserHistory(user.id, user.name);
+        if (isMounted) {
+          setHistoryWithdrawals(withdrawals);
+          // Merge transactions: Remove old ones for this user and add new fetched ones
+          setTransactions(prev => {
+            const others = prev.filter(t => t.userId !== user.id);
+            return [...others, ...txns];
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch user history:", error);
+      } finally {
+        if (isMounted) setIsLoadingHistory(false);
+      }
+    };
+
+    if (user.id) {
+      fetchHistory();
+    }
+
+    return () => { isMounted = false; };
+  }, [user.id, user.name, setTransactions]);
 
   // Real Bank Info from user object
   const bankInfo = {
@@ -343,7 +375,53 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
               </div>
             )}
 
-            {(activeTab === 'bids' || activeTab === 'withdrawals' || activeTab === 'support') && (
+            {activeTab === 'withdrawals' && (
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+                    <th className="px-4 sm:px-6 py-4">Request Details</th>
+                    <th className="px-4 sm:px-6 py-4">Amount</th>
+                    <th className="px-4 sm:px-6 py-4">Status</th>
+                    <th className="px-4 sm:px-6 py-4 text-right">Details</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {historyWithdrawals.length > 0 ? (
+                    historyWithdrawals.map((w) => (
+                      <tr key={w.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-4 sm:px-6 py-4 sm:py-5">
+                          <div className="flex flex-col">
+                            <span className="text-xs sm:text-sm font-black text-slate-800 tracking-tight">Ref #{w.id}</span>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{w.requestedAt}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 sm:py-5 font-black text-slate-900 text-xs sm:text-sm">
+                          ₹{w.amount.toLocaleString()}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 sm:py-5">
+                          <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${w.status === 'approved' ? 'bg-emerald-50 text-emerald-600' :
+                              w.status === 'rejected' ? 'bg-rose-50 text-rose-600' :
+                                'bg-amber-50 text-amber-600'
+                            }`}>
+                            {w.status}
+                          </span>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 sm:py-5 text-right">
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">{w.method}</span>
+                            <span className="text-[9px] text-slate-400 font-medium">{w.details?.upiId || 'N/A'}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan={4} className="px-6 py-24 text-center text-slate-300 font-black uppercase text-xs tracking-widest italic opacity-50">No Withdrawals Found</td></tr>
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            {(activeTab === 'bids' || activeTab === 'support') && (
               <div className="flex flex-col items-center justify-center py-24 opacity-30 select-none">
                 <History size={64} className="text-slate-200 mb-4" />
                 <p className="text-sm font-black text-slate-400 uppercase tracking-widest">No detailed records found</p>

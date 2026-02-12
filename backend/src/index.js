@@ -80,6 +80,11 @@ async function initDatabase() {
             await sequelize.query(`ALTER TABLE "Users" ADD COLUMN IF NOT EXISTS "account_holder_name" VARCHAR(255);`);
             await sequelize.query(`ALTER TABLE "Users" ADD COLUMN IF NOT EXISTS "upi_id" VARCHAR(255);`);
             console.log('✅ User bank columns ready');
+
+            console.log('🔄 Checking User referral columns...');
+            await sequelize.query(`ALTER TABLE "Users" ADD COLUMN IF NOT EXISTS "referral_code" VARCHAR(255) UNIQUE;`);
+            await sequelize.query(`ALTER TABLE "Users" ADD COLUMN IF NOT EXISTS "referred_by" INTEGER REFERENCES "Users"(id);`);
+            console.log('✅ User referral columns ready');
         } catch (colError) {
             console.log('⚠️  Column check error:', colError.message);
         }

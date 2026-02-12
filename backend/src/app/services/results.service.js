@@ -68,6 +68,100 @@ class ResultsService {
         }
     }
 
+    /**
+     * Process wins for Single Digit and Patti
+     */
+    async _processSessionWins(marketId, session, single, panna, transaction) {
+        // 1. Fetch Game Types
+        const gameTypes = await GameType.findAll();
+        const gtMap = {};
+        gameTypes.forEach(g => gtMap[g.name] = g);
+
+        const singleGT = gtMap['Single Digit'];
+        const singlePattiGT = gtMap['Single Patti'];
+        const doublePattiGT = gtMap['Double Patti'];
+        const triplePattiGT = gtMap['Triple Patti'];
+
+        // 2. Determine Patti Type
+        const pannaDigits = panna.split('').sort();
+        let pattiTypeGT = singlePattiGT; // Default
+        if (pannaDigits[0] === pannaDigits[1] && pannaDigits[1] === pannaDigits[2]) {
+            pattiTypeGT = triplePattiGT;
+        } else if (pannaDigits[0] === pannaDigits[1] || pannaDigits[1] === pannaDigits[2]) {
+            pattiTypeGT = doublePattiGT;
+        }
+
+        // 3. Find Pending Bids for this Session
+        // We fetch ALL pending bids for this market/session to mark wins AND losses
+        const bids = await Bid.findAll({
+            where: {
+                market_id: marketId,
+                session: session,
+                status: 'pending',
+                // We only care about Single and Patti types here. Complex types (Jodi/Sangam) are handled separately.
+                game_type_id: {
+                    [Op.in]: [singleGT?.id, singlePattiGT?.id, doublePattiGT?.id, triplePattiGT?.id].filter(id => id)
+                }
+            },
+            transaction
+        });
+
+        // 4. Process Bids
+        for (const bid of bids) {
+            let isWin = false;
+            let rate = 0;
+            let winDescription = '';
+
+            // Check Single Digit Win
+            if (bid.game_type_id === singleGT?.id) {
+                if (bid.digit === single) {
+                    isWin = true;
+                    rate = singleGT.rate;
+                    winDescription = `Win: Single Digit ${single}`;
+                }
+            }
+            // Check Patti Win
+            else if (bid.game_type_id === pattiTypeGT?.id) {
+                // For Patti, the User MUST have bet on the correct Patti Type AND the correct Panna
+                // If the result is Double Patti, but user bet on Single Patti with same number (impossible logic, but safety check)
+                if (bid.digit === panna) {
+                    isWin = true;
+                    rate = pattiTypeGT.rate;
+                    winDescription = `Win: ${pattiTypeGT.name} ${panna}`;
+                }
+            }
+
+            // Update Bid Status
+            if (isWin) {
+                const winAmount = bid.amount * rate;
+                bid.status = 'won';
+                bid.win_amount = winAmount;
+                await bid.save({ transaction });
+
+                // Credit Wallet
+                const wallet = await Wallet.findOne({ where: { user_id: bid.user_id }, transaction });
+                if (wallet) {
+                    wallet.balance = parseFloat(wallet.balance) + winAmount;
+                    await wallet.save({ transaction });
+
+                    // Log Transaction
+                    await WalletTransaction.create({
+                        wallet_id: wallet.id,
+                        amount: winAmount,
+                        type: 'win',
+                        description: `${winDescription} (${rate}x)`,
+                        reference_id: bid.id.toString()
+                    }, { transaction });
+                }
+            } else {
+                // Mark as Lost
+                bid.status = 'lost';
+                bid.win_amount = 0;
+                await bid.save({ transaction });
+            }
+        }
+    }
+
     async _processComplexWins(marketId, results, transaction) {
         const { openPanna, openSingle, closePanna, closeSingle } = results;
 

@@ -10,7 +10,26 @@ class ReferralController {
             const userId = req.user.id;
 
             // 1. Get User's Referral Code
-            const user = await User.findByPk(userId, { attributes: ['referral_code'] });
+            // 1. Get User
+            const user = await User.findByPk(userId);
+
+            // Auto-generate referral code if missing (for existing users)
+            if (!user.referral_code) {
+                const namePrefix = user.full_name ? user.full_name.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() : 'USR';
+                let isUnique = false;
+                let newCode = '';
+
+                // Simple collision check loop (though collision is unlikely with random 4 digits)
+                while (!isUnique) {
+                    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+                    newCode = `${namePrefix}${randomSuffix}`;
+                    const existing = await User.findOne({ where: { referral_code: newCode } });
+                    if (!existing) isUnique = true;
+                }
+
+                user.referral_code = newCode;
+                await user.save();
+            }
 
             // 2. Count Referrals
             const totalReferrals = await User.count({ where: { referred_by: userId } });

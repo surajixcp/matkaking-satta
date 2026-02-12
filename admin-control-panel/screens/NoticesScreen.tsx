@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { 
-  BellRing, Plus, Send, Trash2, X, Save, 
+import {
+  BellRing, Plus, Send, Trash2, X, Save,
   CheckCircle, Clock, Edit2, Megaphone
 } from 'lucide-react';
 import { Notice } from '../types';
@@ -76,32 +76,57 @@ const NoticeModal: React.FC<{
   );
 };
 
+import { noticeService } from '../services/api';
+
 const NoticesScreen: React.FC<{ notices: Notice[], setNotices: React.Dispatch<React.SetStateAction<Notice[]>> }> = ({ notices, setNotices }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleAddOrUpdateNotice = (data: Omit<Notice, 'id' | 'date'>) => {
-    if (editingNotice) {
-      setNotices(prev => prev.map(n => n.id === editingNotice.id ? { ...n, ...data } : n));
-    } else {
-      const newNotice: Notice = {
-        id: Math.random().toString(36).substr(2, 9),
-        ...data,
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-      };
-      setNotices(prev => [newNotice, ...prev]);
+  const handleAddOrUpdateNotice = async (data: Omit<Notice, 'id' | 'date'>) => {
+    setLoading(true);
+    try {
+      if (editingNotice) {
+        const updated = await noticeService.update(editingNotice.id, data);
+        setNotices(prev => prev.map(n => n.id === editingNotice.id ? { ...updated, date: new Date(updated.createdAt).toLocaleDateString() } : n));
+      } else {
+        const newNotice = await noticeService.create(data);
+        // Ensure date format matches UI expectation if needed, or rely on API return
+        setNotices(prev => [{ ...newNotice, date: new Date(newNotice.createdAt).toLocaleDateString() }, ...prev]);
+      }
+      setIsModalOpen(false);
+      setEditingNotice(null);
+    } catch (error) {
+      console.error('Failed to save notice', error);
+      alert('Failed to save notice');
+    } finally {
+      setLoading(false);
     }
-    setIsModalOpen(false); setEditingNotice(null);
   };
 
-  const handleDeleteNotice = (id: string) => {
+  const handleDeleteNotice = async (id: string) => {
     if (confirm('Permanently delete this announcement? It will be removed from all user devices immediately.')) {
-      setNotices(prev => prev.filter(n => n.id !== id));
+      try {
+        await noticeService.delete(id);
+        setNotices(prev => prev.filter(n => n.id !== id));
+      } catch (error) {
+        console.error('Failed to delete notice', error);
+        alert('Failed to delete notice');
+      }
     }
   };
 
-  const handleToggleActive = (id: string) => {
-    setNotices(prev => prev.map(n => n.id === id ? { ...n, active: !n.active } : n));
+  const handleToggleActive = async (id: string) => {
+    const notice = notices.find(n => n.id === id);
+    if (!notice) return;
+
+    try {
+      const updated = await noticeService.update(id, { active: !notice.active });
+      setNotices(prev => prev.map(n => n.id === id ? { ...n, active: updated.active } : n));
+    } catch (error) {
+      console.error('Failed to toggle notice', error);
+      alert('Failed to update status');
+    }
   };
 
   return (
@@ -120,7 +145,7 @@ const NoticesScreen: React.FC<{ notices: Notice[], setNotices: React.Dispatch<Re
             <h4 className="text-lg font-black text-slate-800 mb-2 leading-tight group-hover:text-indigo-600 transition-colors">{notice.title}</h4>
             <p className="text-sm text-slate-500 mb-8 leading-relaxed font-medium line-clamp-3">{notice.message}</p>
             <div className="flex items-center justify-between pt-5 border-t border-slate-50">
-              <div className="flex items-center gap-2 text-slate-400"><Clock size={14} /><span className="text-[10px] font-bold uppercase tracking-widest">{notice.date}</span></div>
+              <div className="flex items-center gap-2 text-slate-400"><Clock size={14} /><span className="text-[10px] font-bold uppercase tracking-widest">{notice.date || 'Just now'}</span></div>
               <div className="flex items-center gap-1">
                 <button onClick={() => { setEditingNotice(notice); setIsModalOpen(true); }} className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Edit"><Edit2 size={18} /></button>
                 <button onClick={() => handleDeleteNotice(notice.id)} className="p-2.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-all" title="Delete Announcement"><Trash2 size={18} /></button>

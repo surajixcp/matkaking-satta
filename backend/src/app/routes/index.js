@@ -19,6 +19,7 @@ router.use('/results', require('./results.routes'));
 router.use('/deposits', require('./deposit.routes'));
 router.use('/settings', require('./settings.routes'));
 router.use('/withdraw', require('../modules/withdraw/withdraw.routes'));
+router.use('/notices', require('./notices.routes'));
 
 const scrapedResultsController = require('../controllers/scraped-results.controller');
 

@@ -15,7 +15,7 @@ import SettingsScreen from './screens/SettingsScreen';
 import RolesScreen from './screens/RolesScreen';
 import UserProfileScreen from './screens/UserProfileScreen';
 import Layout from './components/Layout';
-import { authService, dashboardService, userService, marketService, resultService } from './services/api';
+import { authService, dashboardService, userService, marketService, resultService, noticeService } from './services/api';
 import { useEffect } from 'react';
 // Initial Data
 const INITIAL_NOTICES: Notice[] = [];
@@ -69,15 +69,17 @@ const App: React.FC = () => {
   const fetchInitialData = async () => {
     setIsLoading(true);
     try {
-      const [marketData, userData, statsData] = await Promise.all([
+      const [marketData, userData, statsData, noticesData] = await Promise.all([
         marketService.getMarkets(),
         userService.getUsers(1, 100),
-        dashboardService.getStats()
+        dashboardService.getStats(),
+        noticeService.getAll()
       ]);
 
       if (marketData) setMarkets(marketData);
       if (userData && userData.users) setUsers(userData.users);
       if (statsData) setDashboardData(statsData);
+      if (noticesData) setNotices(noticesData);
 
       // TODO: Fetch Bids, Transactions, Withdrawals, Results once API endpoints exist
 

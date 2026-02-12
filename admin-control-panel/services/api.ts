@@ -282,6 +282,25 @@ export const settingsService = {
     update: (data: any) => api.put('/settings', data),
 };
 
+export const noticeService = {
+    getAll: async () => {
+        const response = await api.get('/notices');
+        return response.data.data;
+    },
+    create: async (data: any) => {
+        const response = await api.post('/notices', data);
+        return response.data.data;
+    },
+    update: async (id: string, data: any) => {
+        const response = await api.put(`/notices/${id}`, data);
+        return response.data.data;
+    },
+    delete: async (id: string) => {
+        const response = await api.delete(`/notices/${id}`);
+        return response.data.data;
+    }
+};
+
 export const scraperService = {
     getRecent: async () => {
         const response = await api.get('/scraper/results');

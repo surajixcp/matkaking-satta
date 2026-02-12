@@ -172,10 +172,10 @@ class AdminService {
      * Get pending withdrawals
      */
     async getPendingWithdrawals() {
-        return await Transaction.findAll({
+        return await WalletTransaction.findAll({
             where: { type: 'withdrawal', status: 'pending' },
             include: [{ model: User, as: 'user', attributes: ['id', 'full_name', 'phone'] }],
-            order: [['created_at', 'ASC']]
+            order: [['createdAt', 'ASC']] // Changed created_at to createdAt to match model
         });
     }
 
@@ -189,9 +189,9 @@ class AdminService {
 
         if (!user) throw new Error('User not found');
 
-        const transactions = await Transaction.findAll({
+        const transactions = await WalletTransaction.findAll({
             where: { wallet_id: user.wallet.id },
-            order: [['created_at', 'DESC']]
+            order: [['createdAt', 'DESC']] // Changed created_at to createdAt
         });
 
         const withdrawals = await WithdrawRequest.findAll({

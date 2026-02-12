@@ -82,26 +82,35 @@ class MarketsService {
             ]
         });
 
-        const currentTime = this.getCurrentISTTime();
+        const currentIST = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+        const dateObj = new Date(currentIST);
+        const currentHours = dateObj.getHours();
+        const currentMinutes = dateObj.getMinutes();
+        const currentTotalMinutes = currentHours * 60 + currentMinutes;
 
         return markets.map(market => {
             const m = market.toJSON();
-            // Determine if market is currently open for betting
-            // 1. Must be active (status = true)
-            // 2. Must be open for betting manual toggle (is_open_for_betting = true)
-
             let isOpen = false;
 
             if (m.status && m.is_open_for_betting) {
-                if (m.open_time <= m.close_time) {
-                    // Day market: Open until close time
-                    isOpen = currentTime < m.close_time;
+                // Parse DB Time (HH:MM:SS)
+                const [openH, openM] = m.open_time.split(':').map(Number);
+                const [closeH, closeM] = m.close_time.split(':').map(Number);
+
+                const openTotalMinutes = openH * 60 + openM;
+                const closeTotalMinutes = closeH * 60 + closeM;
+
+                if (openTotalMinutes <= closeTotalMinutes) {
+                    // Day Market (e.g. 10:00 to 22:00)
+                    // Currently logic: Open until close.
+                    // If we want allow betting before open, then < closeTime is correct.
+                    // If strict: >= open && <= close.
+                    // Sticking to "Betting Open until Close" logic for now.
+                    isOpen = currentTotalMinutes < closeTotalMinutes;
                 } else {
-                    // Overnight market logic
-                    // Open if:
-                    // 1. Current Time < Close Time (Morning part of overnight)
-                    // OR 2. Current Time >= Open Time (Night part of overnight)
-                    isOpen = currentTime < m.close_time || currentTime >= m.open_time;
+                    // Overnight Market (e.g. 22:00 to 02:00)
+                    // Open if: Time >= 22:00 OR Time < 02:00
+                    isOpen = currentTotalMinutes >= openTotalMinutes || currentTotalMinutes < closeTotalMinutes;
                 }
             }
 

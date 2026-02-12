@@ -1,4 +1,6 @@
-const { User, Wallet, Bid, Market, Result, Transaction, sequelize } = require('../../db/models');
+const {
+    User, Wallet, Bid, Deposit, WithdrawRequest, WalletTransaction, Otp, FcmToken
+} = require('../../db/models');
 const { Op } = require('sequelize');
 
 class AdminService {
@@ -142,10 +144,29 @@ class AdminService {
             throw new Error('User not found');
         }
 
-        // Optional: Check if user has active bets or balance before deleting?
-        // For now, we will allow deletion but maybe we should archive or soft delete?
-        // Let's hard delete for "Permanently delete" request.
+        // Delete all related records first to avoid Foreign Key Constraint violations
+        // Models: Wallet, Bid, Deposit, WithdrawRequest, WalletTransaction, Otp, FcmToken, ScrapedResult? (no)
 
+        // 1. Delete Wallet and Transactions
+        // Wallet depends on User. Transactions depend on Wallet.
+        const wallet = await Wallet.findOne({ where: { user_id: userId } });
+        if (wallet) {
+            await WalletTransaction.destroy({ where: { wallet_id: wallet.id } });
+            await wallet.destroy();
+        }
+
+        // 2. Delete Bids
+        await Bid.destroy({ where: { user_id: userId } });
+
+        // 3. Delete Deposits & Withdrawals
+        await Deposit.destroy({ where: { user_id: userId } });
+        await WithdrawRequest.destroy({ where: { user_id: userId } });
+
+        // 4. Delete other stuff
+        await Otp.destroy({ where: { phone: user.phone } });
+        await FcmToken.destroy({ where: { user_id: userId } });
+
+        // Finally delete the user
         await user.destroy();
         return { message: 'User deleted successfully' };
     }

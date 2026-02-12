@@ -102,11 +102,8 @@ class MarketsService {
 
                 if (openTotalMinutes <= closeTotalMinutes) {
                     // Day Market (e.g. 10:00 to 22:00)
-                    // Currently logic: Open until close.
-                    // If we want allow betting before open, then < closeTime is correct.
-                    // If strict: >= open && <= close.
-                    // Sticking to "Betting Open until Close" logic for now.
-                    isOpen = currentTotalMinutes < closeTotalMinutes;
+                    // Strict Logic: Open only BETWEEN Open and Close times.
+                    isOpen = currentTotalMinutes >= openTotalMinutes && currentTotalMinutes < closeTotalMinutes;
                 } else {
                     // Overnight Market (e.g. 22:00 to 02:00)
                     // Open if: Time >= 22:00 OR Time < 02:00

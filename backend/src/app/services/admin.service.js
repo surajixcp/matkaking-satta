@@ -132,6 +132,23 @@ class AdminService {
 
         return { transactions, withdrawals, bids, totalWinnings };
     }
+    /**
+     * Delete user by ID
+     * @param {string} userId
+     */
+    async deleteUser(userId) {
+        const user = await User.findByPk(userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        // Optional: Check if user has active bets or balance before deleting?
+        // For now, we will allow deletion but maybe we should archive or soft delete?
+        // Let's hard delete for "Permanently delete" request.
+
+        await user.destroy();
+        return { message: 'User deleted successfully' };
+    }
 }
 
 module.exports = new AdminService();

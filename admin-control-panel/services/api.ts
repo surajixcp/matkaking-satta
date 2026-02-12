@@ -126,7 +126,12 @@ export const userService = {
                 timestamp: new Date(b.createdAt).toLocaleTimeString(),
                 date: new Date(b.createdAt).toLocaleDateString()
             }))
-        };
+        }))
+    };
+},
+    deleteUser: async (id: string) => {
+        const response = await api.delete(`/admin/users/${id}`);
+        return response.data;
     }
 };
 

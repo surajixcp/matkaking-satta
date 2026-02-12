@@ -15,5 +15,6 @@ router.get('/users', adminController.getUsers);
 router.put('/users/:id/status', adminController.updateUserStatus);
 router.get('/withdrawals/pending', adminController.getPendingWithdrawals);
 router.get('/users/:id/history', adminController.getUserHistory);
+router.delete('/users/:id', adminController.deleteUser);
 
 module.exports = router;

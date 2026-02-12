@@ -5,6 +5,7 @@ import {
   CheckCircle2, Plus, Eye
 } from 'lucide-react';
 import { UserData, Transaction } from '../types';
+import { userService } from '../services/api';
 
 interface AdjustModalProps {
   user: UserData | null;
@@ -133,10 +134,18 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, setUsers, setTransacti
     }
   };
 
-  const handleBulkDelete = () => {
-    if (confirm(`DANGER: Delete ${selectedIds.size} accounts?`)) {
-      setUsers(prev => prev.filter(u => !selectedIds.has(u.id)));
-      setSelectedIds(new Set());
+  const handleBulkDelete = async () => {
+    if (confirm(`DANGER: Permanently delete ${selectedIds.size} accounts?`)) {
+      try {
+        // execute all deletions
+        await Promise.all(Array.from(selectedIds).map(id => userService.deleteUser(id)));
+
+        setUsers(prev => prev.filter(u => !selectedIds.has(u.id)));
+        setSelectedIds(new Set());
+      } catch (error) {
+        console.error("Failed to delete some users:", error);
+        alert("Failed to delete some users. Please refresh and try again.");
+      }
     }
   };
 
@@ -144,13 +153,20 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, setUsers, setTransacti
     setUsers(prev => prev.map(u => u.id === id ? { ...u, status: currentStatus === 'active' ? 'blocked' : 'active' } : u));
   };
 
-  const handleDeleteUser = (id: string) => {
-    if (confirm("Permanently delete this user?")) {
-      setUsers(prev => prev.filter(u => u.id !== id));
-      if (selectedIds.has(id)) {
-        const next = new Set(selectedIds);
-        next.delete(id);
-        setSelectedIds(next);
+  const handleDeleteUser = async (id: string) => {
+    if (confirm("Permanently delete this user? This action cannot be undone.")) {
+      try {
+        await userService.deleteUser(id);
+        setUsers(prev => prev.filter(u => u.id !== id));
+        if (selectedIds.has(id)) {
+          const next = new Set(selectedIds);
+          next.delete(id);
+          setSelectedIds(next);
+        }
+        // Optional: Show toast success
+      } catch (error) {
+        console.error("Failed to delete user:", error);
+        alert("Failed to delete user. Please try again.");
       }
     }
   };

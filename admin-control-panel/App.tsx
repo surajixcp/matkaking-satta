@@ -38,6 +38,7 @@ const App: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>(INITIAL_ROLES);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>(INITIAL_WITHDRAWALS);
   const [bids, setBids] = useState<Bid[]>(INITIAL_BIDS);
+  const [dashboardData, setDashboardData] = useState<any>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -68,13 +69,15 @@ const App: React.FC = () => {
   const fetchInitialData = async () => {
     setIsLoading(true);
     try {
-      const [marketData, userData] = await Promise.all([
+      const [marketData, userData, statsData] = await Promise.all([
         marketService.getMarkets(),
-        userService.getUsers(1, 100)
+        userService.getUsers(1, 100),
+        dashboardService.getStats()
       ]);
 
       if (marketData) setMarkets(marketData);
       if (userData && userData.users) setUsers(userData.users);
+      if (statsData) setDashboardData(statsData);
 
       // TODO: Fetch Bids, Transactions, Withdrawals, Results once API endpoints exist
 
@@ -117,7 +120,7 @@ const App: React.FC = () => {
   const renderScreen = () => {
     switch (currentScreen) {
       case Screen.DASHBOARD:
-        return <DashboardScreen users={users} transactions={transactions} onNavigate={setCurrentScreen} />;
+        return <DashboardScreen data={dashboardData} onNavigate={setCurrentScreen} />;
       case Screen.USERS:
         return <UsersScreen
           users={users}

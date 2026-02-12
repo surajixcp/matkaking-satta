@@ -10,8 +10,20 @@ import {
 import { Screen, UserData, Transaction } from '../types';
 
 interface DashboardProps {
-  users: UserData[];
-  transactions: Transaction[];
+  data: {
+    stats: {
+      totalUsers: number;
+      marketBids: number;
+      dailyRevenue: number;
+      payoutRequests: number;
+    };
+    charts: {
+      name: string;
+      users: number;
+      revenue: number;
+    }[];
+    recentActivity: any[];
+  } | null;
   onNavigate: (screen: Screen) => void;
 }
 
@@ -39,38 +51,16 @@ const StatCard = ({ title, value, icon, trend, trendValue, color, onClick }: any
   </div>
 );
 
-const DashboardScreen: React.FC<DashboardProps> = ({ users, transactions, onNavigate }) => {
-  const stats = useMemo(() => {
-    const totalUsers = users.length;
-    const activeBets = Math.floor(users.length * 0.35);
-    const pendingWithdrawals = transactions.filter(t => t.type === 'withdrawal' && t.status === 'pending').length;
+const DashboardScreen: React.FC<DashboardProps> = ({ data, onNavigate }) => {
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
-    const dailyRevenue = transactions
-      .filter(t => t.type === 'deposit' && t.status === 'success')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    return {
-      totalUsers,
-      activeBets,
-      dailyRevenue: `₹${dailyRevenue.toLocaleString()}`,
-      pendingWithdrawals
-    };
-  }, [users, transactions]);
-
-  const chartData = useMemo(() => {
-    const last7Days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return last7Days.map((day, i) => ({
-      name: day,
-      revenue: 2000 + (Math.random() * 5000),
-      users: 15 + Math.floor(Math.random() * 30)
-    }));
-  }, []);
-
-  const recentTransactions = useMemo(() => {
-    return [...transactions]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 5);
-  }, [transactions]);
+  const { stats, charts, recentActivity } = data;
 
   return (
     <div className="space-y-10">
@@ -86,7 +76,7 @@ const DashboardScreen: React.FC<DashboardProps> = ({ users, transactions, onNavi
         />
         <StatCard
           title="Market Bids"
-          value={stats.activeBets.toLocaleString()}
+          value={stats.marketBids.toLocaleString()}
           icon={<TrendingUp className="text-amber-600" />}
           trend="up"
           trendValue="6.5"
@@ -95,7 +85,7 @@ const DashboardScreen: React.FC<DashboardProps> = ({ users, transactions, onNavi
         />
         <StatCard
           title="Daily Revenue"
-          value={stats.dailyRevenue}
+          value={`₹${stats.dailyRevenue.toLocaleString()}`}
           icon={<DollarSign className="text-emerald-600" />}
           trend="down"
           trendValue="1.4"
@@ -104,7 +94,7 @@ const DashboardScreen: React.FC<DashboardProps> = ({ users, transactions, onNavi
         />
         <StatCard
           title="Payout Requests"
-          value={stats.pendingWithdrawals}
+          value={stats.payoutRequests}
           icon={<Clock className="text-rose-600" />}
           trend="up"
           trendValue="9.8"
@@ -126,7 +116,7 @@ const DashboardScreen: React.FC<DashboardProps> = ({ users, transactions, onNavi
           </div>
           <div style={{ width: '100%', height: 280 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+              <AreaChart data={charts}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1} />
@@ -155,7 +145,7 @@ const DashboardScreen: React.FC<DashboardProps> = ({ users, transactions, onNavi
           </div>
           <div style={{ width: '100%', height: 280 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
+              <BarChart data={charts}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} />
@@ -191,7 +181,7 @@ const DashboardScreen: React.FC<DashboardProps> = ({ users, transactions, onNavi
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {recentTransactions.map((txn) => (
+              {recentActivity.map((txn: any) => (
                 <tr key={txn.id} className="group hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-3">
                     <div className="flex items-center space-x-3">
@@ -209,12 +199,12 @@ const DashboardScreen: React.FC<DashboardProps> = ({ users, transactions, onNavi
                       }`}>{txn.type}</span>
                   </td>
                   <td className="px-6 py-3 text-right">
-                    <span className={`text-sm font-bold ${txn.type === 'withdrawal' ? 'text-rose-600' : txn.type === 'deposit' ? 'text-emerald-600' : 'text-slate-900'}`}>
-                      {txn.type === 'withdrawal' ? '-' : '+'}₹{txn.amount.toLocaleString()}
+                    <span className={`text-sm font-bold ${txn.type === 'withdrawal' || txn.type === 'withdraw' ? 'text-rose-600' : txn.type === 'deposit' ? 'text-emerald-600' : 'text-slate-900'}`}>
+                      {txn.type === 'withdrawal' || txn.type === 'withdraw' ? '-' : '+'}₹{txn.amount.toLocaleString()}
                     </span>
                   </td>
                   <td className="px-6 py-3 text-right">
-                    <span className="text-xs font-medium text-slate-400">{txn.date.split(',')[1]}</span>
+                    <span className="text-xs font-medium text-slate-400">{new Date(txn.date).toLocaleString()}</span>
                   </td>
                 </tr>
               ))}

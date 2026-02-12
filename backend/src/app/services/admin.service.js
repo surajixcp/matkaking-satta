@@ -1,5 +1,4 @@
-const {
-    User, Wallet, Bid, Deposit, WithdrawRequest, WalletTransaction, Otp, FcmToken
+User, Wallet, Bid, Deposit, WithdrawRequest, WalletTransaction, Otp, FcmToken, sequelize
 } = require('../../db/models');
 const { Op } = require('sequelize');
 
@@ -11,33 +10,118 @@ class AdminService {
         const totalUsers = await User.count({ where: { role: 'user' } });
         const activeUsers = await User.count({ where: { role: 'user', status: 'active' } });
 
-        const totalBids = await Bid.count();
-        const totalBidAmount = await Bid.sum('amount') || 0;
-
-        // Calculate total deposits and withdrawals today
+        // Change 'activeBets' logic: Users with active status? Or actual active bids?
+        // Frontend expects "Market Bids". Let's show total bids today.
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
 
-        const todayDeposits = await Transaction.sum('amount', {
+        const todaysBids = await Bid.count({
+            where: { createdAt: { [Op.gte]: startOfDay } }
+        });
+
+        const totalBidAmount = await Bid.sum('amount') || 0;
+
+        // Daily Revenue & Withdrawals
+        const todayDeposits = await WalletTransaction.sum('amount', {
             where: {
                 type: 'deposit',
                 status: 'success',
-                created_at: { [Op.gte]: startOfDay }
+                createdAt: { [Op.gte]: startOfDay }
             }
         }) || 0;
 
-        const todayWithdrawals = await Transaction.sum('amount', {
+        const todayWithdrawals = await WithdrawRequest.count({
             where: {
-                type: 'withdrawal',
-                status: 'success',
-                created_at: { [Op.gte]: startOfDay }
+                status: 'pending'
             }
-        }) || 0;
+        }); // "Payout Requests" usually implies pending ones
+
+        // --- Charts Data ---
+
+        // 1. User Acquisition (Last 7 Days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+
+        const userAcquisitionData = await User.findAll({
+            attributes: [
+                [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
+                [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+            ],
+            where: {
+                role: 'user',
+                createdAt: { [Op.gte]: sevenDaysAgo }
+            },
+            group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
+            order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']],
+            raw: true
+        });
+
+        // 2. Revenue Performance (Last 7 Days)
+        const revenueData = await WalletTransaction.findAll({
+            attributes: [
+                [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
+                [sequelize.fn('SUM', sequelize.col('amount')), 'total']
+            ],
+            where: {
+                type: 'deposit',
+                status: 'success',
+                createdAt: { [Op.gte]: sevenDaysAgo }
+            },
+            group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
+            order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']],
+            raw: true
+        });
+
+        // 3. Recent Audit Logs
+        const recentActivity = await WalletTransaction.findAll({
+            limit: 10,
+            order: [['createdAt', 'DESC']],
+            include: [{
+                model: Wallet,
+                as: 'wallet',
+                include: [{ model: User, as: 'user', attributes: ['id', 'full_name'] }]
+            }]
+        });
+
+        // Process Charts Data into consistent format for frontend
+        const last7Days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+
+            const userEntry = userAcquisitionData.find(x => x.date === dateStr);
+            const revEntry = revenueData.find(x => x.date === dateStr);
+
+            last7Days.push({
+                name: dayName,
+                date: dateStr,
+                users: userEntry ? parseInt(userEntry.count) : 0,
+                revenue: revEntry ? parseFloat(revEntry.total) : 0
+            });
+        }
+
+        // Process Activity Log
+        const activityLog = recentActivity.map(txn => ({
+            id: txn.id,
+            user: txn.wallet?.user?.full_name || 'Unknown',
+            type: txn.type,
+            amount: parseFloat(txn.amount),
+            date: txn.createdAt,
+            description: txn.description
+        }));
 
         return {
-            users: { total: totalUsers, active: activeUsers },
-            bids: { count: totalBids, totalAmount: totalBidAmount },
-            finance: { todayDeposits, todayWithdrawals }
+            stats: {
+                totalUsers,
+                marketBids: todaysBids,
+                dailyRevenue: todayDeposits,
+                payoutRequests: todayWithdrawals
+            },
+            charts: last7Days,
+            recentActivity: activityLog
         };
     }
 

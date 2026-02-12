@@ -1,4 +1,5 @@
-User, Wallet, Bid, Deposit, WithdrawRequest, WalletTransaction, Otp, FcmToken, sequelize
+const {
+    User, Wallet, Bid, Deposit, WithdrawRequest, WalletTransaction, Otp, FcmToken, sequelize
 } = require('../../db/models');
 const { Op } = require('sequelize');
 

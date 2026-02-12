@@ -163,7 +163,7 @@ class AdminService {
         await WithdrawRequest.destroy({ where: { user_id: userId } });
 
         // 4. Delete other stuff
-        await Otp.destroy({ where: { phone: user.phone } });
+        await Otp.destroy({ where: { phone_number: user.phone } });
         await FcmToken.destroy({ where: { user_id: userId } });
 
         // Finally delete the user

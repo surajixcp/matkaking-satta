@@ -86,7 +86,6 @@ export const userService = {
     },
     getUserHistory: async (id: string, name: string = 'Unknown') => {
         const response = await api.get(`/admin/users/${id}/history`);
-        const response = await api.get(`/admin/users/${id}/history`);
         const { transactions, withdrawals, totalWinnings } = response.data.data;
 
         return {
@@ -126,9 +125,8 @@ export const userService = {
                 timestamp: new Date(b.createdAt).toLocaleTimeString(),
                 date: new Date(b.createdAt).toLocaleDateString()
             }))
-        }))
-    };
-},
+        };
+    },
     deleteUser: async (id: string) => {
         const response = await api.delete(`/admin/users/${id}`);
         return response.data;
@@ -194,7 +192,7 @@ export const resultService = {
         return response.data.data;
     },
     revoke: async (id: string) => {
-        const response = await api.del(`/results/${id}`);
+        const response = await api.delete(`/results/${id}`);
         return response;
     }
 }

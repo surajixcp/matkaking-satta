@@ -32,6 +32,10 @@ const SettingsScreen: React.FC = () => {
   const [email, setEmail] = useState('support@kingmatka.com');
   const [phone, setPhone] = useState('+91 90000 12345');
 
+  // Legal Content
+  const [terms, setTerms] = useState('');
+  const [privacy, setPrivacy] = useState('');
+
   // UI States
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -66,6 +70,8 @@ const SettingsScreen: React.FC = () => {
         if (s.telegram) setTelegram(s.telegram);
         if (s.email) setEmail(s.email);
         if (s.phone) setPhone(s.phone);
+        if (s.terms) setTerms(s.terms);
+        if (s.privacy) setPrivacy(s.privacy);
       }
     } catch (error) {
       console.error('Failed to load settings', error);
@@ -146,6 +152,8 @@ const SettingsScreen: React.FC = () => {
         telegram: telegram,
         email: email,
         phone: phone,
+        terms: terms,
+        privacy: privacy,
       });
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -476,6 +484,39 @@ const SettingsScreen: React.FC = () => {
               ) : (
                 <p className="text-[10px] text-slate-400 mt-2 font-medium">This ID will be used for QR code generation in user app.</p>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Legal Content */}
+        <div className="bg-white p-5 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6 sm:space-y-8 lg:col-span-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+              <Shield size={22} />
+            </div>
+            <h4 className="text-base sm:text-lg font-bold text-slate-900">Legal Content</h4>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Terms & Conditions</label>
+              <textarea
+                value={terms}
+                onChange={(e) => setTerms(e.target.value)}
+                rows={6}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 outline-none focus:border-indigo-500 transition-all font-mono"
+                placeholder="Enter Terms & Conditions..."
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Privacy Policy</label>
+              <textarea
+                value={privacy}
+                onChange={(e) => setPrivacy(e.target.value)}
+                rows={6}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 outline-none focus:border-indigo-500 transition-all font-mono"
+                placeholder="Enter Privacy Policy..."
+              />
             </div>
           </div>
         </div>

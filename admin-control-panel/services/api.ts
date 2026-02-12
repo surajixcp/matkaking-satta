@@ -86,9 +86,11 @@ export const userService = {
     },
     getUserHistory: async (id: string, name: string = 'Unknown') => {
         const response = await api.get(`/admin/users/${id}/history`);
-        const { transactions, withdrawals } = response.data.data;
+        const response = await api.get(`/admin/users/${id}/history`);
+        const { transactions, withdrawals, totalWinnings } = response.data.data;
 
         return {
+            totalWinnings: parseFloat(totalWinnings || '0'),
             transactions: transactions.map((t: any) => ({
                 id: `${t.id}`,
                 user: name,

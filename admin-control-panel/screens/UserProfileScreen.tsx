@@ -101,6 +101,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
   const [historyWithdrawals, setHistoryWithdrawals] = useState<WithdrawalRequest[]>([]);
   const [historyBids, setHistoryBids] = useState<Bid[]>([]);
+  const [totalWinnings, setTotalWinnings] = useState<number>(0);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Filter specific user data
@@ -115,10 +116,11 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
     const fetchHistory = async () => {
       setIsLoadingHistory(true);
       try {
-        const { transactions: txns, withdrawals, bids } = await userService.getUserHistory(user.id, user.name);
+        const { transactions: txns, withdrawals, bids, totalWinnings } = await userService.getUserHistory(user.id, user.name);
         if (isMounted) {
           setHistoryWithdrawals(withdrawals);
           setHistoryBids(bids);
+          setTotalWinnings(totalWinnings);
           // Merge transactions: Remove old ones for this user and add new fetched ones
           setTransactions(prev => {
             const others = prev.filter(t => t.userId !== user.id);
@@ -246,8 +248,8 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
                 <p className="text-xl sm:text-2xl font-black tracking-tight">₹{user.balance.toLocaleString()}</p>
               </div>
               <div className="bg-indigo-50 px-5 py-4 rounded-2xl border border-indigo-100 flex-1 min-w-[160px] max-w-[200px] shadow-lg shadow-indigo-100/10">
-                <p className="text-[8px] sm:text-[10px] text-indigo-600 font-black uppercase tracking-widest mb-1.5 opacity-80">Est. Total Winnings</p>
-                <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">₹{(user.balance * 1.5).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                <p className="text-[8px] sm:text-[10px] text-indigo-600 font-black uppercase tracking-widest mb-1.5 opacity-80">Total Winnings</p>
+                <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">₹{totalWinnings.toLocaleString()}</p>
               </div>
             </div>
           </div>

@@ -122,7 +122,15 @@ class AdminService {
             order: [['created_at', 'DESC']]
         });
 
-        return { transactions, withdrawals, bids };
+        // Calculate total winnings
+        const totalWinnings = await Bid.sum('win_amount', {
+            where: {
+                user_id: userId,
+                status: 'won'
+            }
+        }) || 0;
+
+        return { transactions, withdrawals, bids, totalWinnings };
     }
 }
 

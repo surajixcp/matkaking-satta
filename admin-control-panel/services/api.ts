@@ -308,4 +308,15 @@ export const scraperService = {
     }
 };
 
+export const referralService = {
+    getSettings: async () => {
+        const response = await api.get('/referral/settings');
+        return response.data.data;
+    },
+    updateSettings: async (data: any) => {
+        const response = await api.put('/referral/settings', data);
+        return response.data.data;
+    }
+};
+
 export default api;

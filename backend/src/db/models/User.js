@@ -14,6 +14,11 @@ module.exports = (sequelize) => {
             User.hasOne(models.Wallet, { foreignKey: 'user_id', as: 'wallet' });
             User.hasMany(models.Bid, { foreignKey: 'user_id', as: 'bids' });
             User.hasMany(models.WithdrawRequest, { foreignKey: 'user_id', as: 'withdrawals' });
+
+            // Referral Associations
+            User.belongsTo(models.User, { as: 'referrer', foreignKey: 'referred_by' });
+            User.hasMany(models.User, { as: 'referrals', foreignKey: 'referred_by' });
+            User.hasMany(models.ReferralTransaction, { foreignKey: 'referrer_id', as: 'referralEarnings' });
         }
 
         // Instance method to check MPIN (using bcrypt if hashed, or direct compare if not yet)
@@ -71,6 +76,20 @@ module.exports = (sequelize) => {
             type: DataTypes.STRING,
             allowNull: true,
             unique: true
+        },
+        // Referral Details
+        referral_code: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            unique: true
+        },
+        referred_by: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'Users',
+                key: 'id'
+            }
         },
         // Bank Details
         bank_name: {

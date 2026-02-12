@@ -1,4 +1,4 @@
-const { sequelize, Deposit, Wallet, WalletTransaction, User } = require('../../db/models');
+const { sequelize, Deposit, Wallet, WalletTransaction, User, ReferralSetting, ReferralTransaction } = require('../../db/models');
 const { Op } = require('sequelize');
 
 class DepositService {
@@ -74,6 +74,57 @@ class DepositService {
                 reference_id: deposit.id.toString(),
                 status: 'success'
             }, { transaction });
+
+            // 4. Process Referral Bonus
+            const user = await User.findByPk(deposit.user_id, { transaction });
+            if (user && user.referred_by) {
+                // Get Settings
+                let settings = await ReferralSetting.findOne({ transaction });
+                if (!settings) {
+                    // Create default settings if not exists
+                    settings = { bonus_amount: 50, min_deposit_amount: 500, is_enabled: true };
+                }
+
+                if (settings.is_enabled && parseFloat(deposit.amount) >= parseFloat(settings.min_deposit_amount)) {
+                    // Check if bonus already given
+                    const existingBonus = await ReferralTransaction.findOne({
+                        where: { referred_id: user.id },
+                        transaction
+                    });
+
+                    if (!existingBonus) {
+                        // Credit Referrer
+                        const referrerWallet = await Wallet.findOne({ where: { user_id: user.referred_by }, transaction });
+
+                        if (referrerWallet) {
+                            const bonus = parseFloat(settings.bonus_amount);
+
+                            // Update Referrer Wallet
+                            await referrerWallet.update({
+                                balance: parseFloat(referrerWallet.balance) + bonus
+                            }, { transaction });
+
+                            // Log Wallet Transaction (Referrer)
+                            await WalletTransaction.create({
+                                wallet_id: referrerWallet.id,
+                                amount: bonus,
+                                type: 'deposit', // specific type 'bonus' would be better but 'deposit' increases balance
+                                description: `Referral Bonus: ${user.phone}`,
+                                status: 'success'
+                            }, { transaction });
+
+                            // Log Referral Transaction
+                            await ReferralTransaction.create({
+                                referrer_id: user.referred_by,
+                                referred_id: user.id,
+                                amount: bonus,
+                                type: 'bonus',
+                                status: 'completed'
+                            }, { transaction });
+                        }
+                    }
+                }
+            }
 
             await transaction.commit();
             return deposit;

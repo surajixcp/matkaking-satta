@@ -13,13 +13,27 @@ class AuthService {
     async register(data) {
         const transaction = await sequelize.transaction();
         try {
-            const { phone, mpin, full_name, device_token } = data;
+            const { phone, mpin, full_name, device_token, referralCode } = data;
 
             // Check if user exists
             const existingUser = await User.findOne({ where: { phone } });
             if (existingUser) {
                 throw new Error('Phone number already registered');
             }
+
+            // Handle Referral Logic
+            let referredBy = null;
+            if (referralCode) {
+                const referrer = await User.findOne({ where: { referral_code: referralCode } });
+                if (referrer) {
+                    referredBy = referrer.id;
+                }
+            }
+
+            // Generate unique referral code: First 3 chars of name + 4 random digits
+            const namePrefix = full_name ? full_name.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() : 'USR';
+            const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+            const myReferralCode = `${namePrefix}${randomSuffix}`;
 
             // Create User
             const mpin_hash = await bcrypt.hash(String(mpin).trim(), 10);
@@ -29,7 +43,9 @@ class AuthService {
                 full_name,
                 device_token,
                 role: 'user',
-                status: 'active'
+                status: 'active',
+                referral_code: myReferralCode,
+                referred_by: referredBy
             }, { transaction });
 
             // Create User Wallet

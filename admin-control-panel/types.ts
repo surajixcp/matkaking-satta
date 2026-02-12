@@ -11,7 +11,15 @@ export enum Screen {
   NOTICES = 'notices',
   SETTINGS = 'settings',
   ROLES = 'roles',
-  DEPOSITS = 'deposits'
+  DEPOSITS = 'deposits',
+  REFERRALS = 'referrals'
+}
+
+export interface ReferralSetting {
+  id: number;
+  bonus_amount: string;
+  min_deposit_amount: string;
+  is_enabled: boolean;
 }
 
 export interface UserData {

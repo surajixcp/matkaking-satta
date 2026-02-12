@@ -14,6 +14,7 @@ import NoticesScreen from './screens/NoticesScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import RolesScreen from './screens/RolesScreen';
 import UserProfileScreen from './screens/UserProfileScreen';
+import ReferralScreen from './screens/ReferralScreen';
 import Layout from './components/Layout';
 import { authService, dashboardService, userService, marketService, resultService, noticeService } from './services/api';
 import { useEffect } from 'react';
@@ -157,6 +158,8 @@ const App: React.FC = () => {
         return <SettingsScreen />;
       case Screen.ROLES:
         return <RolesScreen roles={roles} setRoles={setRoles} />;
+      case Screen.REFERRALS:
+        return <ReferralScreen />;
       default:
         return <DashboardScreen users={users} transactions={transactions} onNavigate={setCurrentScreen} />;
     }

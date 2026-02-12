@@ -2,7 +2,7 @@
 import React from 'react';
 import {
   LayoutDashboard, Users, Store, Trophy, ListChecks,
-  Wallet, PieChart, TrendingUp, CreditCard, Bell, Settings, ShieldCheck, LogOut
+  Wallet, PieChart, TrendingUp, CreditCard, Bell, Settings, ShieldCheck, LogOut, Gift
 } from 'lucide-react';
 import { Screen } from './types';
 
@@ -15,6 +15,7 @@ export const NAV_ITEMS = [
   { id: Screen.DEPOSITS, label: 'Deposits', icon: <CreditCard size={20} /> },
   { id: Screen.WITHDRAWALS, label: 'Withdrawals', icon: <Wallet size={20} /> },
   { id: Screen.FINANCE, label: 'Finance', icon: <CreditCard size={20} /> },
+  { id: Screen.REFERRALS, label: 'Referral System', icon: <Gift size={20} /> },
   { id: Screen.NOTICES, label: 'Notices & Content', icon: <Bell size={20} /> },
   { id: Screen.SETTINGS, label: 'App Settings', icon: <Settings size={20} /> },
   { id: Screen.ROLES, label: 'Admin Roles', icon: <ShieldCheck size={20} /> },

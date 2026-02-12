@@ -2,14 +2,14 @@ const authService = require('../services/auth.service');
 
 exports.register = async (req, res, next) => {
     try {
-        const { phone, mpin, full_name, device_token } = req.body;
+        const { phone, mpin, full_name, device_token, referralCode } = req.body;
 
         // Basic validation
         if (!phone || !mpin) {
             return res.status(400).json({ success: false, error: 'Phone and MPIN are required' });
         }
 
-        const result = await authService.register({ phone, mpin, full_name, device_token });
+        const result = await authService.register({ phone, mpin, full_name, device_token, referralCode });
 
         res.status(201).json({
             success: true,

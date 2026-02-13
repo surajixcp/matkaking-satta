@@ -122,8 +122,17 @@ class WalletService {
     async credit(userId, amount, description = 'Credit', referenceId = null) {
         const transaction = await sequelize.transaction();
         try {
-            const wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
-            if (!wallet) throw new Error('Wallet not found');
+            let wallet = await Wallet.findOne({ where: { user_id: userId }, transaction });
+
+            if (!wallet) {
+                console.log(`[WalletService] Wallet not found for user ${userId} during credit. Auto-creating...`);
+                wallet = await Wallet.create({
+                    user_id: userId,
+                    balance: 0.00,
+                    bonus: 0.00,
+                    status: 'active'
+                }, { transaction });
+            }
 
             // Update Balance
             const newBalance = parseFloat(wallet.balance) + parseFloat(amount);

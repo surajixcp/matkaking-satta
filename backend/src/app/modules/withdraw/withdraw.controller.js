@@ -136,9 +136,11 @@ async function rejectWithdrawal(req, res) {
         });
     } catch (error) {
         console.error('Reject withdrawal error:', error);
+        console.error('Error Stack:', error.stack);
         res.status(400).json({
             success: false,
             message: error.message || 'Failed to reject withdrawal',
+            details: error.stack
         });
     }
 }

@@ -46,15 +46,17 @@ exports.generateOTP = async (req, res) => {
                 console.log(`[MOCK SMS] OTP for ${phone} is: ${otpCode}`);
                 res.send({
                     data: {
-                        message: "OTP sent successfully (Mock - Configure Fast2SMS for production)",
-                        isMock: true
+                        message: `OTP sent successfully (Mock). Code: ${otpCode}`,
+                        isMock: true,
+                        otp: otpCode
                     }
                 });
             } else if (result.success) {
                 // Fast2SMS sent successfully
                 res.send({
                     data: {
-                        message: "OTP sent successfully via SMS"
+                        message: `OTP sent successfully. Code: ${otpCode} (Debug Mode)`,
+                        otp: otpCode // Expose for frontend auto-fill if needed
                     }
                 });
             } else {
@@ -73,8 +75,9 @@ exports.generateOTP = async (req, res) => {
             console.log(`[MOCK SMS - Fallback] OTP for ${phone} is: ${otpCode}`);
             res.send({
                 data: {
-                    message: `SMS Error: ${smsError.message}. OTP saved (check logs)`,
-                    isFallback: true
+                    message: `SMS Error: ${smsError.message}. OTP: ${otpCode}`,
+                    isFallback: true,
+                    otp: otpCode
                 }
             });
         }

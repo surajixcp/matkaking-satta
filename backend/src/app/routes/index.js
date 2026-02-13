@@ -1,6 +1,15 @@
 const express = require('express');
 const router = express.Router();
 
+// Debug Route to check deployment version
+router.get('/version', (req, res) => {
+    res.json({
+        version: '1.5.0-atomic-fix',
+        timestamp: new Date().toISOString(),
+        message: 'If you see this, the atomic transaction fix is DEPLOYED.'
+    });
+});
+
 const authRoutes = require('./auth.routes');
 // const userRoutes = require('./user.routes');
 const walletRoutes = require('./wallet.routes');

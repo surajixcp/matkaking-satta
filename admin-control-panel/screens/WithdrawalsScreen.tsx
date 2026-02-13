@@ -87,7 +87,20 @@ const ProcessWithdrawalModal: React.FC<{
               <button onClick={handleApprove} disabled={isProcessing} className="flex-[1.5] bg-emerald-600 text-white px-3 py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg hover:bg-emerald-500 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50">{isProcessing ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <CheckCircle size={14} />}<span>Approve</span></button>
             </div>
           ) : (
-            <button onClick={handleRejectSubmit} disabled={isProcessing || !reason.trim()} className="w-full bg-rose-600 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg hover:bg-rose-500 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50">{isProcessing ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <XCircle size={14} />}<span>Reject</span></button>
+            <div className="space-y-3">
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Enter rejection reason..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-rose-500"
+                rows={3}
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button onClick={() => setShowRejectForm(false)} className="flex-1 bg-slate-200 text-slate-700 px-3 py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-slate-300 transition-all">Back</button>
+                <button onClick={handleRejectSubmit} disabled={isProcessing || !reason.trim()} className="flex-[2] bg-rose-600 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg hover:bg-rose-500 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50">{isProcessing ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <XCircle size={14} />}<span>Confirm Reject</span></button>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -135,12 +148,18 @@ const WithdrawalsScreen: React.FC<WithdrawalsScreenProps> = () => {
   };
 
   const handleReject = async (id: string, reason: string) => {
+    console.log('[REJECT] Starting rejection for ID:', id, 'Reason:', reason);
     try {
-      await walletService.rejectWithdrawal(id, reason);
-      alert('Withdrawal Rejected');
-      loadWithdrawals();
+      console.log('[REJECT] Calling API...');
+      const response = await walletService.rejectWithdrawal(id, reason);
+      console.log('[REJECT] API Response:', response);
+      alert('Withdrawal Rejected - Check console for details');
+      console.log('[REJECT] Reloading withdrawals...');
+      await loadWithdrawals();
+      console.log('[REJECT] Reload complete');
     } catch (error: any) {
-      console.error("Rejection failed", error);
+      console.error("[REJECT] Error caught:", error);
+      console.error("[REJECT] Error response:", error.response);
       alert('Failed to reject: ' + (error.response?.data?.message || error.message));
     }
   };

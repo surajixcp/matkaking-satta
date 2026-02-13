@@ -300,12 +300,37 @@ class ResultsService {
         }
     }
 
-    async getHistory() {
-        return await Result.findAll({
+    async getHistory(applyDelay = false) {
+        let results = await Result.findAll({
             include: [{ model: Market, as: 'market' }],
             order: [['date', 'DESC'], ['updatedAt', 'DESC']],
             limit: 50
         });
+
+        if (applyDelay) {
+            const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+            results = results.map(r => {
+                const result = r.toJSON(); // Convert to plain object to modify
+
+                if (new Date(result.updatedAt) > tenMinutesAgo) {
+                    // Result was updated recently (less than 10 mins ago)
+
+                    if (result.close_declare) {
+                        // If close is present, assume the update was for Close
+                        // Mask Close, keep Open
+                        result.close_declare = null;
+                    } else {
+                        // If close is not present, the update was likely for Open
+                        // Mask Open
+                        result.open_declare = null;
+                    }
+                }
+                return result;
+            });
+        }
+
+        return results;
     }
 
     async revokeResult(resultId) {

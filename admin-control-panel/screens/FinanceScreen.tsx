@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { depositService, walletService } from '../services/api';
+import * as XLSX from 'xlsx';
 import {
   Download, Calendar, Search, ArrowUpRight, ArrowDownRight,
   Wallet, Banknote, Filter, CheckCircle, Clock, XCircle,
@@ -29,6 +30,8 @@ const FinanceScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'deposits' | 'withdrawals' | 'pnl'>('deposits');
   const [searchTerm, setSearchTerm] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [startDate, setStartDate] = useState(new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     fetchTransactions();
@@ -84,9 +87,18 @@ const FinanceScreen: React.FC = () => {
         txn.user.toLowerCase().includes(search) ||
         txn.id.toLowerCase().includes(search) ||
         txn.method.toLowerCase().includes(search);
-      return typeMatch && searchMatch;
+
+      const txnDate = new Date(txn.date);
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      // Set end date to end of day
+      end.setHours(23, 59, 59, 999);
+
+      const dateMatch = txnDate >= start && txnDate <= end;
+
+      return typeMatch && searchMatch && dateMatch;
     });
-  }, [activeTab, searchTerm, transactions]);
+  }, [activeTab, searchTerm, transactions, startDate, endDate]);
 
   const stats = useMemo(() => {
     const successTxns = transactions.filter(t => t.status === 'success');
@@ -102,9 +114,34 @@ const FinanceScreen: React.FC = () => {
   const handleExport = () => {
     setIsExporting(true);
     setTimeout(() => {
-      setIsExporting(false);
-      alert('Report exported successfully as betpro_finance_report.csv');
-    }, 1500);
+      try {
+        const dataToExport = filteredTransactions.map(t => ({
+          'Transaction ID': t.id,
+          'User Name': t.user,
+          'User ID': t.userId,
+          'Type': t.type,
+          'Amount': t.amount,
+          'Date': new Date(t.date).toLocaleString(),
+          'Status': t.status,
+          'Method': t.method
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Finance Report");
+
+        // Generate filename with date range
+        const fileName = `Finance_Report_${startDate}_to_${endDate}.xlsx`;
+
+        XLSX.writeFile(wb, fileName);
+        alert('Report exported successfully!');
+      } catch (error) {
+        console.error("Export failed:", error);
+        alert("Failed to export data.");
+      } finally {
+        setIsExporting(false);
+      }
+    }, 500);
   };
 
   const handleDeleteTransaction = (id: string) => {
@@ -199,10 +236,24 @@ const FinanceScreen: React.FC = () => {
             <button onClick={() => setActiveTab('withdrawals')} className={`px-6 py-2.5 text-sm font-bold rounded-xl transition-all ${activeTab === 'withdrawals' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>Withdrawals</button>
             <button onClick={() => setActiveTab('pnl')} className={`px-6 py-2.5 text-sm font-bold rounded-xl transition-all ${activeTab === 'pnl' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>P&L Report</button>
           </div>
-          <div className="hidden md:flex items-center bg-white border border-slate-200 rounded-2xl px-4 py-2.5 text-slate-500 text-sm font-bold gap-3 cursor-pointer hover:bg-slate-50 transition-colors">
+          <div className="hidden md:flex items-center bg-white border border-slate-200 rounded-2xl px-4 py-2 text-slate-500 text-sm font-bold gap-3 hover:bg-slate-50 transition-colors">
             <Calendar size={18} className="text-indigo-600" />
-            <span>March 1 - March 31, 2024</span>
-            <ChevronDown size={14} />
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-transparent border-none focus:ring-0 text-slate-600 font-medium text-xs p-0 cursor-pointer"
+              />
+              <span className="text-slate-400">-</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-transparent border-none focus:ring-0 text-slate-600 font-medium text-xs p-0 cursor-pointer"
+              />
+            </div>
+            {/* <ChevronDown size={14} /> */}
           </div>
         </div>
         <button onClick={handleExport} disabled={isExporting} className="flex items-center justify-center gap-2 bg-slate-900 text-white px-8 py-3 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10 active:scale-95 disabled:opacity-70">

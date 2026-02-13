@@ -235,10 +235,15 @@ class WalletService {
 
         // Add Transactions
         transactions.forEach(t => {
+            let amount = parseFloat(t.amount);
+            if (['withdraw', 'bid', 'admin_deduct'].includes(t.type)) {
+                amount = -amount;
+            }
+
             unifiedHistory.push({
                 id: `txn_${t.id}`,
                 type: t.type, // 'deposit', 'withdraw', 'bid', 'win'
-                amount: t.amount,
+                amount: amount,
                 status: t.status, // 'success', 'pending', 'failed'
                 description: t.description,
                 reference: t.reference_id,

@@ -22,13 +22,15 @@ async function createWithdraw(data) {
 /**
  * Get withdrawal by ID
  */
-async function getWithdrawById(id) {
-    return await WithdrawRequest.findByPk(id, {
+async function getWithdrawById(id, transaction = null) {
+    const options = {
         include: [
             { model: User, as: 'user', attributes: ['id', 'full_name', 'phone'] },
             { model: User, as: 'approver', attributes: ['id', 'full_name'] }
         ]
-    });
+    };
+    if (transaction) options.transaction = transaction;
+    return await WithdrawRequest.findByPk(id, options);
 }
 
 /**
@@ -68,13 +70,14 @@ async function getAllWithdraws(filters = {}) {
 /**
  * Update withdrawal status
  */
-async function updateWithdraw(id, data) {
-    const [updatedCount] = await WithdrawRequest.update(data, {
-        where: { id }
-    });
+async function updateWithdraw(id, data, transaction = null) {
+    const options = { where: { id } };
+    if (transaction) options.transaction = transaction;
+
+    const [updatedCount] = await WithdrawRequest.update(data, options);
 
     if (updatedCount === 0) return null;
-    return await getWithdrawById(id);
+    return await getWithdrawById(id, transaction); // Check getWithdrawById signature
 }
 
 /**

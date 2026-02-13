@@ -111,54 +111,65 @@ async function approveWithdraw(withdrawId, adminId, remark = null) {
  * Reject withdrawal
  */
 async function rejectWithdraw(withdrawId, adminId, remark = null) {
+    const { sequelize, WalletTransaction } = require('../../../db/models');
+
     console.log(`[WithdrawService] Rejecting withdrawal #${withdrawId} by admin ${adminId}`);
-    const withdraw = await withdrawRepo.getWithdrawById(withdrawId);
 
-    if (!withdraw) {
-        throw new Error('Withdrawal request not found');
-    }
+    // Start Atomic Transaction
+    const transaction = await sequelize.transaction();
 
-    if (withdraw.status !== 'pending') {
-        throw new Error(`Cannot reject ${withdraw.status} request`);
-    }
-
-    // Refund wallet
-    console.log(`[WithdrawService] Refunding user ${withdraw.user_id} amount ${withdraw.amount}`);
     try {
+        const withdraw = await withdrawRepo.getWithdrawById(withdrawId, transaction); // Pass transaction
+
+        if (!withdraw) {
+            throw new Error('Withdrawal request not found');
+        }
+
+        if (withdraw.status !== 'pending') {
+            throw new Error(`Cannot reject ${withdraw.status} request`);
+        }
+
+        // 1. Refund wallet (Pass transaction)
+        console.log(`[WithdrawService] Refunding user ${withdraw.user_id} amount ${withdraw.amount}`);
         await walletService.credit(
             withdraw.user_id,
-            parseFloat(withdraw.amount), // Ensure float
+            parseFloat(withdraw.amount),
             'Withdrawal Refund',
-            withdrawId.toString()
+            withdrawId.toString(),
+            transaction // <--- IMPORTANT
         );
-        console.log(`[WithdrawService] Refund successful`);
-    } catch (err) {
-        console.error(`[WithdrawService] Refund failed:`, err);
-        throw err;
-    }
 
-    // Update status
-    const updated = await withdrawRepo.updateWithdraw(withdrawId, {
-        status: 'rejected',
-        approved_by: adminId,
-        admin_remark: remark,
-    });
+        // 2. Update status (Pass transaction)
+        const updated = await withdrawRepo.updateWithdraw(withdrawId, {
+            status: 'rejected',
+            approved_by: adminId,
+            admin_remark: remark,
+        }, transaction); // <--- IMPORTANT
 
-    // Sync Wallet Transaction Status (The original debit should count as failed/rejected)
-    const walletTxn = await WalletTransaction.findOne({
-        where: {
-            reference_id: withdrawId.toString(),
-            type: 'withdraw'
+        // 3. Sync Wallet Transaction Status
+        const walletTxn = await WalletTransaction.findOne({
+            where: {
+                reference_id: withdrawId.toString(),
+                type: 'withdraw'
+            },
+            transaction // <--- IMPORTANT
+        });
+
+        if (walletTxn) {
+            walletTxn.status = 'failed';
+            walletTxn.description += ` (Rejected: ${remark || 'Admin'})`;
+            await walletTxn.save({ transaction }); // <--- IMPORTANT
         }
-    });
 
-    if (walletTxn) {
-        walletTxn.status = 'failed';
-        walletTxn.description += ` (Rejected: ${remark || 'Admin'})`;
-        await walletTxn.save();
+        await transaction.commit();
+        console.log(`[WithdrawService] Rejection completed and committed for #${withdrawId}`);
+        return updated;
+
+    } catch (error) {
+        await transaction.rollback();
+        console.error(`[WithdrawService] Rejection failed and rolled back for #${withdrawId}:`, error);
+        throw error;
     }
-
-    return updated;
 }
 
 /**

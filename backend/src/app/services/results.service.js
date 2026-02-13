@@ -71,16 +71,71 @@ class ResultsService {
     /**
      * Process wins for Single Digit and Patti
      */
-    async _processSessionWins(marketId, session, single, panna, transaction) {
-        // 1. Fetch Game Types
-        const gameTypes = await GameType.findAll();
-        const gtMap = {};
-        gameTypes.forEach(g => gtMap[g.name] = g);
+    /**
+     * Re-calculate wins for a specific market and date.
+     * Useful if bids were missed or game types were mismatched.
+     */
+    async reprocessResults(marketId, date) {
+        // Use a transaction to ensure atomicity
+        const transaction = await sequelize.transaction();
+        try {
+            const result = await Result.findOne({
+                where: { market_id: marketId, date: date },
+                transaction
+            });
 
-        const singleGT = gtMap['Single Digit'];
-        const singlePattiGT = gtMap['Single Patti'];
-        const doublePattiGT = gtMap['Double Patti'];
-        const triplePattiGT = gtMap['Triple Patti'];
+            if (!result) throw new Error('No declared result found for this market and date.');
+
+            console.log(`[Reprocess] Starting for Market ${marketId} Date ${date}`);
+
+            // 1. Process Open Session wins if declared
+            if (result.open_declare) {
+                const [panna, single] = result.open_declare.split('-');
+                console.log(`[Reprocess] Processing OPEN: ${panna}-${single}`);
+                await this._processSessionWins(marketId, 'Open', single, panna, transaction);
+            }
+
+            // 2. Process Close Session wins if declared
+            if (result.close_declare) {
+                const [panna, single] = result.close_declare.split('-');
+                console.log(`[Reprocess] Processing CLOSE: ${panna}-${single}`);
+                await this._processSessionWins(marketId, 'Close', single, panna, transaction);
+            }
+
+            // 3. Process Complex Wins (Jodi/Sangam) if BOTH declared
+            if (result.open_declare && result.close_declare) {
+                const [openPanna, openSingle] = result.open_declare.split('-');
+                const [closePanna, closeSingle] = result.close_declare.split('-');
+                console.log(`[Reprocess] Processing COMPLEX wins`);
+                await this._processComplexWins(marketId, {
+                    openPanna, openSingle, closePanna, closeSingle
+                }, transaction);
+            }
+
+            await transaction.commit();
+            return { success: true, message: `Reprocessed results for Market ${marketId}` };
+        } catch (error) {
+            await transaction.rollback();
+            console.error(`[Reprocess] Error: ${error.message}`);
+            throw error;
+        }
+    }
+
+    /**
+     * Process wins for Single Digit and Patti
+     */
+    async _processSessionWins(marketId, session, single, panna, transaction) {
+        // 1. Fetch Game Types with Flexible Matching
+        const gameTypes = await GameType.findAll();
+        const findGT = (keywords) => gameTypes.find(gt => keywords.some(k => gt.name.toLowerCase().includes(k.toLowerCase())));
+
+        const singleGT = findGT(['single digit', 'single', 'ank']);
+        const singlePattiGT = findGT(['single patti', 'single panna', 'sp']);
+        const doublePattiGT = findGT(['double patti', 'double panna', 'dp']);
+        const triplePattiGT = findGT(['triple patti', 'triple panna', 'tp']);
+
+        // Log if any critical game type is missing
+        if (!singleGT) console.warn("[Warning] 'Single Digit' GameType not found!");
 
         // 2. Determine Patti Type
         const pannaDigits = panna.split('').sort();
@@ -93,18 +148,19 @@ class ResultsService {
 
         // 3. Find Pending Bids for this Session
         // We fetch ALL pending bids for this market/session to mark wins AND losses
+        const targetGameTypeIds = [singleGT?.id, singlePattiGT?.id, doublePattiGT?.id, triplePattiGT?.id].filter(id => id);
+
         const bids = await Bid.findAll({
             where: {
                 market_id: marketId,
                 session: session,
                 status: 'pending',
-                // We only care about Single and Patti types here. Complex types (Jodi/Sangam) are handled separately.
-                game_type_id: {
-                    [Op.in]: [singleGT?.id, singlePattiGT?.id, doublePattiGT?.id, triplePattiGT?.id].filter(id => id)
-                }
+                game_type_id: { [Op.in]: targetGameTypeIds }
             },
             transaction
         });
+
+        console.log(`[Wins] Found ${bids.length} pending bids for ${session} session.`);
 
         // 4. Process Bids
         for (const bid of bids) {
@@ -113,7 +169,7 @@ class ResultsService {
             let winDescription = '';
 
             // Check Single Digit Win
-            if (bid.game_type_id === singleGT?.id) {
+            if (singleGT && bid.game_type_id === singleGT.id) {
                 if (bid.digit === single) {
                     isWin = true;
                     rate = singleGT.rate;
@@ -121,9 +177,7 @@ class ResultsService {
                 }
             }
             // Check Patti Win
-            else if (bid.game_type_id === pattiTypeGT?.id) {
-                // For Patti, the User MUST have bet on the correct Patti Type AND the correct Panna
-                // If the result is Double Patti, but user bet on Single Patti with same number (impossible logic, but safety check)
+            else if (pattiTypeGT && bid.game_type_id === pattiTypeGT.id) {
                 if (bid.digit === panna) {
                     isWin = true;
                     rate = pattiTypeGT.rate;
@@ -165,14 +219,13 @@ class ResultsService {
     async _processComplexWins(marketId, results, transaction) {
         const { openPanna, openSingle, closePanna, closeSingle } = results;
 
-        // 1. Fetch Game Types
+        // 1. Fetch Game Types with Flexible Matching
         const gameTypes = await GameType.findAll();
-        const gtMap = {};
-        gameTypes.forEach(g => gtMap[g.name] = g);
+        const findGT = (keywords) => gameTypes.find(gt => keywords.some(k => gt.name.toLowerCase().includes(k.toLowerCase())));
 
-        const jodiGT = gtMap['Jodi Digit'];
-        const halfSangamGT = gtMap['Half Sangam'];
-        const fullSangamGT = gtMap['Full Sangam'];
+        const jodiGT = findGT(['jodi', 'pair']);
+        const halfSangamGT = findGT(['half sangam', 'half ka sangam']);
+        const fullSangamGT = findGT(['full sangam', 'sangam']);
 
         // 2. Define Winning Combinations
         const winningJodi = `${openSingle}${closeSingle}`;
@@ -181,79 +234,70 @@ class ResultsService {
         const winningHalfSangam2 = `${openSingle}-${closePanna}`;
 
         // 3. Find Pending Bids
-        // We look for bids matching any of these types and digits
+        const targetComplexIds = [jodiGT?.id, halfSangamGT?.id, fullSangamGT?.id].filter(id => id);
+
         const complexBids = await Bid.findAll({
             where: {
                 market_id: marketId,
                 status: 'pending',
-                [Op.or]: [
-                    // Jodi
-                    { game_type_id: jodiGT?.id, digit: winningJodi },
-                    // Full Sangam
-                    { game_type_id: fullSangamGT?.id, digit: winningFullSangam },
-                    // Half Sangam (Check both combinations)
-                    { game_type_id: halfSangamGT?.id, digit: winningHalfSangam1 },
-                    { game_type_id: halfSangamGT?.id, digit: winningHalfSangam2 }
-                ]
+                game_type_id: { [Op.in]: targetComplexIds }
             },
             transaction
         });
 
         // 4. Process Wins
         for (const bid of complexBids) {
+            let isWin = false;
             let rate = 0;
             let winDescription = '';
 
-            if (bid.game_type_id === jodiGT?.id) {
-                rate = jodiGT.rate;
-                winDescription = `Win: Jodi ${bid.digit}`;
-            } else if (bid.game_type_id === fullSangamGT?.id) {
-                rate = fullSangamGT.rate;
-                winDescription = `Win: Full Sangam ${bid.digit}`;
-            } else if (bid.game_type_id === halfSangamGT?.id) {
-                rate = halfSangamGT.rate;
-                winDescription = `Win: Half Sangam ${bid.digit}`;
+            if (jodiGT && bid.game_type_id === jodiGT.id) {
+                if (bid.digit === winningJodi) {
+                    isWin = true;
+                    rate = jodiGT.rate;
+                    winDescription = `Win: Jodi ${bid.digit}`;
+                }
+            } else if (fullSangamGT && bid.game_type_id === fullSangamGT.id) {
+                if (bid.digit === winningFullSangam) {
+                    isWin = true;
+                    rate = fullSangamGT.rate;
+                    winDescription = `Win: Full Sangam ${bid.digit}`;
+                }
+            } else if (halfSangamGT && bid.game_type_id === halfSangamGT.id) {
+                if (bid.digit === winningHalfSangam1 || bid.digit === winningHalfSangam2) {
+                    isWin = true;
+                    rate = halfSangamGT.rate;
+                    winDescription = `Win: Half Sangam ${bid.digit}`;
+                }
             }
 
-            const winAmount = bid.amount * rate;
+            if (isWin) {
+                const winAmount = bid.amount * rate;
+                bid.status = 'won';
+                bid.win_amount = winAmount;
+                await bid.save({ transaction });
 
-            bid.status = 'won';
-            bid.win_amount = winAmount;
-            await bid.save({ transaction });
+                const wallet = await Wallet.findOne({ where: { user_id: bid.user_id }, transaction });
+                if (wallet) {
+                    wallet.balance = parseFloat(wallet.balance) + winAmount;
+                    await wallet.save({ transaction });
 
-            const wallet = await Wallet.findOne({ where: { user_id: bid.user_id }, transaction });
-            if (wallet) {
-                wallet.balance = parseFloat(wallet.balance) + winAmount;
-                await wallet.save({ transaction });
-
-                await WalletTransaction.create({
-                    wallet_id: wallet.id,
-                    amount: winAmount,
-                    type: 'win',
-                    description: `${winDescription} (${rate}x)`,
-                    reference_id: bid.id.toString()
-                }, { transaction });
+                    await WalletTransaction.create({
+                        wallet_id: wallet.id,
+                        amount: winAmount,
+                        type: 'win',
+                        description: `${winDescription} (${rate}x)`,
+                        reference_id: bid.id.toString()
+                    }, { transaction });
+                }
+            } else {
+                // Mark as lost ONLY if we are sure it's a loss. 
+                // Since we filtered by specific Game Types, if it's not a win, it's a loss for these types.
+                bid.status = 'lost';
+                bid.win_amount = 0;
+                await bid.save({ transaction });
             }
         }
-
-        // 5. Mark remaining complex bets as lost
-        // We need to be careful not to mark open/close single/patti bets as lost here, only strictly complex ones.
-        // It's safer to leave 'status: pending' cleanup for a dedicated job or careful query.
-        // For now, let's mark strictly matching game types as lost if they are still pending for this market.
-        // Since Jodi/Sangam are session-independent (conceptually), but stored with some session tag?
-        // Usually they are stored with session='open' or 'close' depending on when placed.
-        // Let's assume we mark ALL pending bets of these Game Types for this Market as LOST.
-
-        const complexGameTypeIds = [jodiGT?.id, halfSangamGT?.id, fullSangamGT?.id].filter(id => id);
-
-        await Bid.update({ status: 'lost' }, {
-            where: {
-                market_id: marketId,
-                status: 'pending',
-                game_type_id: { [Op.in]: complexGameTypeIds }
-            },
-            transaction
-        });
     }
 
     async getHistory() {

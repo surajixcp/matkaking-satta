@@ -1,19 +1,17 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Download, Calendar, Search, ArrowUpRight, ArrowDownRight, 
+import React, { useState, useMemo, useEffect } from 'react';
+import { depositService, walletService } from '../services/api';
+import {
+  Download, Calendar, Search, ArrowUpRight, ArrowDownRight,
   Wallet, Banknote, Filter, CheckCircle, Clock, XCircle,
   TrendingUp, CreditCard, ChevronDown, Landmark, Trash2
 } from 'lucide-react';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer, BarChart, Bar 
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, BarChart, Bar
 } from 'recharts';
 import { Transaction } from '../types';
 
-interface FinanceScreenProps {
-  transactions: Transaction[];
-  setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
-}
+
 
 const CHART_DATA = [
   { name: 'Mar 18', deposits: 4000, withdrawals: 2400 },
@@ -25,18 +23,66 @@ const CHART_DATA = [
   { name: 'Mar 24', deposits: 3490, withdrawals: 4300 },
 ];
 
-const FinanceScreen: React.FC<FinanceScreenProps> = ({ transactions, setTransactions }) => {
+const FinanceScreen: React.FC = () => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'deposits' | 'withdrawals' | 'pnl'>('deposits');
   const [searchTerm, setSearchTerm] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    try {
+      setIsLoading(true);
+      const [depositsData, withdrawalsData] = await Promise.all([
+        depositService.getDeposits('all'),
+        walletService.getWithdrawals('all')
+      ]);
+
+      const formattedDeposits: Transaction[] = depositsData.map((d: any) => ({
+        id: d.id,
+        user: d.userName,
+        userId: d.userId,
+        type: 'deposit',
+        amount: d.amount,
+        date: d.requestDate,
+        status: d.status === 'approved' ? 'success' : d.status === 'rejected' ? 'failed' : 'pending',
+        method: d.utr ? `UPI/${d.utr}` : 'Details'
+      }));
+
+      const formattedWithdrawals: Transaction[] = withdrawalsData.map((w: any) => ({
+        id: w.id,
+        user: w.userName,
+        userId: w.userId,
+        type: 'withdrawal',
+        amount: w.amount,
+        date: w.requestedAt,
+        status: w.status === 'approved' ? 'success' : w.status === 'rejected' ? 'failed' : 'pending',
+        method: 'UPI'
+      }));
+
+      const allTransactions = [...formattedDeposits, ...formattedWithdrawals].sort((a, b) =>
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      setTransactions(allTransactions);
+    } catch (error) {
+      console.error("Failed to fetch finance data", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(txn => {
       const typeMatch = activeTab === 'pnl' ? true : txn.type === activeTab.slice(0, -1);
       const search = searchTerm.toLowerCase();
-      const searchMatch = !search || 
-        txn.user.toLowerCase().includes(search) || 
-        txn.id.toLowerCase().includes(search) || 
+      const searchMatch = !search ||
+        txn.user.toLowerCase().includes(search) ||
+        txn.id.toLowerCase().includes(search) ||
         txn.method.toLowerCase().includes(search);
       return typeMatch && searchMatch;
     });
@@ -64,6 +110,7 @@ const FinanceScreen: React.FC<FinanceScreenProps> = ({ transactions, setTransact
   const handleDeleteTransaction = (id: string) => {
     if (confirm("Permanently delete this transaction log? This will not affect user wallet balance, only the administrative audit history.")) {
       setTransactions(prev => prev.filter(t => t.id !== id));
+      // TODO: Call API to delete transaction if supported
     }
   };
 
@@ -75,7 +122,7 @@ const FinanceScreen: React.FC<FinanceScreenProps> = ({ transactions, setTransact
             <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
               <ArrowUpRight size={24} />
             </div>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">+12% vs last month</span>
+            {/* <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">+12% vs last month</span> */}
           </div>
           <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Total Inflow (Deposits)</p>
           <h3 className="text-3xl font-black text-slate-900 mt-2">₹{stats.deposits.toLocaleString()}</h3>
@@ -86,7 +133,7 @@ const FinanceScreen: React.FC<FinanceScreenProps> = ({ transactions, setTransact
             <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
               <ArrowDownRight size={24} />
             </div>
-            <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg">+4% vs last month</span>
+            {/* <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg">+4% vs last month</span> */}
           </div>
           <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Total Outflow (Withdrawals)</p>
           <h3 className="text-3xl font-black text-slate-900 mt-2">₹{stats.withdrawals.toLocaleString()}</h3>
@@ -97,7 +144,7 @@ const FinanceScreen: React.FC<FinanceScreenProps> = ({ transactions, setTransact
             <div className="p-3 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200">
               <TrendingUp size={24} />
             </div>
-            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">Healthy Margin</span>
+            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">Net Profit</span>
           </div>
           <p className="text-sm font-bold text-indigo-600 uppercase tracking-widest">Net Revenue (P&L)</p>
           <h3 className="text-3xl font-black text-slate-900 mt-2">₹{stats.profit.toLocaleString()}</h3>
@@ -126,14 +173,14 @@ const FinanceScreen: React.FC<FinanceScreenProps> = ({ transactions, setTransact
             <AreaChart data={CHART_DATA}>
               <defs>
                 <linearGradient id="colorDeposits" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1} />
+                  <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 600}} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 600}} />
-              <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)'}} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }} />
+              <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }} />
               <Area type="monotone" dataKey="deposits" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorDeposits)" />
               <Area type="monotone" dataKey="withdrawals" stroke="#cbd5e1" strokeWidth={2} fillOpacity={0} />
             </AreaChart>
@@ -211,7 +258,7 @@ const FinanceScreen: React.FC<FinanceScreenProps> = ({ transactions, setTransact
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                         <button onClick={() => handleDeleteTransaction(txn.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={18} /></button>
+                        <button onClick={() => handleDeleteTransaction(txn.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={18} /></button>
                       </td>
                     </tr>
                   ))

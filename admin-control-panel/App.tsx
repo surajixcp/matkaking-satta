@@ -151,7 +151,7 @@ const App: React.FC = () => {
       case Screen.WITHDRAWALS:
         return <WithdrawalsScreen withdrawals={withdrawals} setWithdrawals={setWithdrawals} />;
       case Screen.FINANCE:
-        return <FinanceScreen transactions={transactions} setTransactions={setTransactions} />;
+        return <FinanceScreen />;
       case Screen.NOTICES:
         return <NoticesScreen notices={notices} setNotices={setNotices} />;
       case Screen.SETTINGS:

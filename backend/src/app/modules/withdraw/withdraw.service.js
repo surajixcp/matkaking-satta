@@ -111,6 +111,7 @@ async function approveWithdraw(withdrawId, adminId, remark = null) {
  * Reject withdrawal
  */
 async function rejectWithdraw(withdrawId, adminId, remark = null) {
+    console.log(`[WithdrawService] Rejecting withdrawal #${withdrawId} by admin ${adminId}`);
     const withdraw = await withdrawRepo.getWithdrawById(withdrawId);
 
     if (!withdraw) {
@@ -122,12 +123,19 @@ async function rejectWithdraw(withdrawId, adminId, remark = null) {
     }
 
     // Refund wallet
-    await walletService.credit(
-        withdraw.user_id,
-        withdraw.amount,
-        'Withdrawal Refund',
-        withdrawId.toString()
-    );
+    console.log(`[WithdrawService] Refunding user ${withdraw.user_id} amount ${withdraw.amount}`);
+    try {
+        await walletService.credit(
+            withdraw.user_id,
+            parseFloat(withdraw.amount), // Ensure float
+            'Withdrawal Refund',
+            withdrawId.toString()
+        );
+        console.log(`[WithdrawService] Refund successful`);
+    } catch (err) {
+        console.error(`[WithdrawService] Refund failed:`, err);
+        throw err;
+    }
 
     // Update status
     const updated = await withdrawRepo.updateWithdraw(withdrawId, {
@@ -137,7 +145,6 @@ async function rejectWithdraw(withdrawId, adminId, remark = null) {
     });
 
     // Sync Wallet Transaction Status (The original debit should count as failed/rejected)
-    // Note: We also added a credit refund above, so balance is restored.
     const walletTxn = await WalletTransaction.findOne({
         where: {
             reference_id: withdrawId.toString(),

@@ -127,6 +127,7 @@ class WalletService {
 
             // Update Balance
             const newBalance = parseFloat(wallet.balance) + parseFloat(amount);
+            console.log(`[WalletService] Credit User ${userId}: Amount ${amount}, Old ${wallet.balance}, New ${newBalance}`);
             await wallet.update({ balance: newBalance }, { transaction });
 
             // Record Transaction

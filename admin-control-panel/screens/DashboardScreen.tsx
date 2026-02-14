@@ -8,6 +8,7 @@ import {
   Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar
 } from 'recharts';
 import { Screen, UserData, Transaction } from '../types';
+import { authService } from '../services/api';
 
 interface DashboardProps {
   data: {
@@ -52,6 +53,10 @@ const StatCard = ({ title, value, icon, trend, trendValue, color, onClick }: any
 );
 
 const DashboardScreen: React.FC<DashboardProps> = ({ data, onNavigate }) => {
+  const adminData = authService.getAdminData();
+  const isSuper = adminData?.role === 'Super Admin';
+  const perms = adminData?.permissions || {};
+
   if (!data) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -62,45 +67,57 @@ const DashboardScreen: React.FC<DashboardProps> = ({ data, onNavigate }) => {
 
   const { stats, charts, recentActivity } = data;
 
+  const canViewUsers = isSuper || perms['user_view'];
+  const canManageMarkets = isSuper || perms['market_manage'] || perms['result_declare'];
+  const canViewFinance = isSuper || perms['withdraw_approve'] || perms['deposit_approve'] || perms['settings_edit'];
+
   return (
     <div className="space-y-10">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Users"
-          value={stats.totalUsers.toLocaleString()}
-          icon={<Users className="text-indigo-600" />}
-          trend="up"
-          trendValue="14.2"
-          color="bg-indigo-50"
-          onClick={() => onNavigate(Screen.USERS)}
-        />
-        <StatCard
-          title="Market Bids"
-          value={stats.marketBids.toLocaleString()}
-          icon={<TrendingUp className="text-amber-600" />}
-          trend="up"
-          trendValue="6.5"
-          color="bg-amber-50"
-          onClick={() => onNavigate(Screen.BIDS)}
-        />
-        <StatCard
-          title="Daily Revenue"
-          value={`₹${stats.dailyRevenue.toLocaleString()}`}
-          icon={<DollarSign className="text-emerald-600" />}
-          trend="down"
-          trendValue="1.4"
-          color="bg-emerald-50"
-          onClick={() => onNavigate(Screen.FINANCE)}
-        />
-        <StatCard
-          title="Payout Requests"
-          value={stats.payoutRequests}
-          icon={<Clock className="text-rose-600" />}
-          trend="up"
-          trendValue="9.8"
-          color="bg-rose-50"
-          onClick={() => onNavigate(Screen.WITHDRAWALS)}
-        />
+        {canViewUsers && (
+          <StatCard
+            title="Total Users"
+            value={stats.totalUsers.toLocaleString()}
+            icon={<Users className="text-indigo-600" />}
+            trend="up"
+            trendValue="14.2"
+            color="bg-indigo-50"
+            onClick={() => onNavigate(Screen.USERS)}
+          />
+        )}
+        {canManageMarkets && (
+          <StatCard
+            title="Market Bids"
+            value={stats.marketBids.toLocaleString()}
+            icon={<TrendingUp className="text-amber-600" />}
+            trend="up"
+            trendValue="6.5"
+            color="bg-amber-50"
+            onClick={() => onNavigate(Screen.BIDS)}
+          />
+        )}
+        {canViewFinance && (
+          <StatCard
+            title="Daily Revenue"
+            value={`₹${stats.dailyRevenue.toLocaleString()}`}
+            icon={<DollarSign className="text-emerald-600" />}
+            trend="down"
+            trendValue="1.4"
+            color="bg-emerald-50"
+            onClick={() => onNavigate(Screen.FINANCE)}
+          />
+        )}
+        {canViewFinance && (
+          <StatCard
+            title="Payout Requests"
+            value={stats.payoutRequests}
+            icon={<Clock className="text-rose-600" />}
+            trend="up"
+            trendValue="9.8"
+            color="bg-rose-50"
+            onClick={() => onNavigate(Screen.WITHDRAWALS)}
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -157,61 +174,63 @@ const DashboardScreen: React.FC<DashboardProps> = ({ data, onNavigate }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-          <div>
-            <h4 className="text-base font-bold text-slate-800 tracking-tight">Audit Trail Log</h4>
-            <p className="text-xs text-slate-500 mt-0.5">Live monitoring feed</p>
+      {canViewFinance && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h4 className="text-base font-bold text-slate-800 tracking-tight">Audit Trail Log</h4>
+              <p className="text-xs text-slate-500 mt-0.5">Live monitoring feed</p>
+            </div>
+            <button
+              onClick={() => onNavigate(Screen.FINANCE)}
+              className="text-xs font-bold text-indigo-600 bg-indigo-50 px-4 py-2 rounded-lg hover:bg-indigo-100 transition-colors"
+            >
+              view all
+            </button>
           </div>
-          <button
-            onClick={() => onNavigate(Screen.FINANCE)}
-            className="text-xs font-bold text-indigo-600 bg-indigo-50 px-4 py-2 rounded-lg hover:bg-indigo-100 transition-colors"
-          >
-            view all
-          </button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50/50 text-slate-500 text-[11px] font-semibold border-b border-slate-100">
-                <th className="px-6 py-3">User Account</th>
-                <th className="px-6 py-3">Activity</th>
-                <th className="px-6 py-3 text-right">Points</th>
-                <th className="px-6 py-3 text-right">Timestamp</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {recentActivity.map((txn: any) => (
-                <tr key={txn.id} className="group hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold ring-1 ring-slate-200/50">
-                        {txn.user.charAt(0)}
-                      </div>
-                      <div>
-                        <span className="text-sm font-semibold text-slate-700 block leading-tight group-hover:text-indigo-600 transition-colors">{txn.user}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">#{txn.id}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-3">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide border ${txn.type === 'deposit' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-slate-50 text-slate-500 border-slate-100'
-                      }`}>{txn.type}</span>
-                  </td>
-                  <td className="px-6 py-3 text-right">
-                    <span className={`text-sm font-bold ${txn.type === 'withdrawal' || txn.type === 'withdraw' ? 'text-rose-600' : txn.type === 'deposit' ? 'text-emerald-600' : 'text-slate-900'}`}>
-                      {txn.type === 'withdrawal' || txn.type === 'withdraw' ? '-' : '+'}₹{txn.amount.toLocaleString()}
-                    </span>
-                  </td>
-                  <td className="px-6 py-3 text-right">
-                    <span className="text-xs font-medium text-slate-400">{new Date(txn.date).toLocaleString()}</span>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50/50 text-slate-500 text-[11px] font-semibold border-b border-slate-100">
+                  <th className="px-6 py-3">User Account</th>
+                  <th className="px-6 py-3">Activity</th>
+                  <th className="px-6 py-3 text-right">Points</th>
+                  <th className="px-6 py-3 text-right">Timestamp</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {recentActivity.map((txn: any) => (
+                  <tr key={txn.id} className="group hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold ring-1 ring-slate-200/50">
+                          {txn.user.charAt(0)}
+                        </div>
+                        <div>
+                          <span className="text-sm font-semibold text-slate-700 block leading-tight group-hover:text-indigo-600 transition-colors">{txn.user}</span>
+                          <span className="text-[10px] text-slate-400 font-medium">#{txn.id}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-3">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide border ${txn.type === 'deposit' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-slate-50 text-slate-500 border-slate-100'
+                        }`}>{txn.type}</span>
+                    </td>
+                    <td className="px-6 py-3 text-right">
+                      <span className={`text-sm font-bold ${txn.type === 'withdrawal' || txn.type === 'withdraw' ? 'text-rose-600' : txn.type === 'deposit' ? 'text-emerald-600' : 'text-slate-900'}`}>
+                        {txn.type === 'withdrawal' || txn.type === 'withdraw' ? '-' : '+'}₹{txn.amount.toLocaleString()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 text-right">
+                      <span className="text-xs font-medium text-slate-400">{new Date(txn.date).toLocaleString()}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

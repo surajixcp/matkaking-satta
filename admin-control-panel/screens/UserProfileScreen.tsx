@@ -3,7 +3,7 @@ import {
   ArrowLeft, Wallet, History, FileText, CreditCard,
   HelpCircle, ShieldAlert, CheckCircle2, X, AlertCircle, Trash2,
   TrendingUp, Landmark, MessageSquare, ShieldCheck, UserX,
-  Calendar
+  Calendar, Users, Gift, Share2
 } from 'lucide-react';
 import { UserData, Transaction, Bid, WithdrawalRequest } from '../types';
 import { userService } from '../services/api';
@@ -102,6 +102,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
   const [historyWithdrawals, setHistoryWithdrawals] = useState<WithdrawalRequest[]>([]);
   const [historyBids, setHistoryBids] = useState<Bid[]>([]);
   const [totalWinnings, setTotalWinnings] = useState<number>(0);
+  const [referralData, setReferralData] = useState<any>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Filter specific user data
@@ -116,11 +117,12 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
     const fetchHistory = async () => {
       setIsLoadingHistory(true);
       try {
-        const { transactions: txns, withdrawals, bids, totalWinnings } = await userService.getUserHistory(user.id, user.name);
+        const { transactions: txns, withdrawals, bids, totalWinnings, referral_data } = await userService.getUserHistory(user.id, user.name);
         if (isMounted) {
           setHistoryWithdrawals(withdrawals);
           setHistoryBids(bids);
           setTotalWinnings(totalWinnings);
+          setReferralData(referral_data);
           // Merge transactions: Remove old ones for this user and add new fetched ones
           setTransactions(prev => {
             const others = prev.filter(t => t.userId !== user.id);
@@ -154,6 +156,7 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
     { id: 'wallet', label: 'Wallet History', icon: <Wallet size={16} /> },
     { id: 'bids', label: 'Bid History', icon: <TrendingUp size={16} /> },
     { id: 'withdrawals', label: 'Withdrawals', icon: <CreditCard size={16} /> },
+    { id: 'referral', label: 'Referrals', icon: <Users size={16} /> },
     { id: 'bank', label: 'Bank Info', icon: <Landmark size={16} /> },
     { id: 'support', label: 'Support Tickets', icon: <MessageSquare size={16} /> },
   ];
@@ -375,6 +378,108 @@ const UserProfileScreen: React.FC<UserProfileScreenProps> = ({ user, transaction
                     </div>
                     <CheckCircle2 size={32} className="text-emerald-500" />
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'referral' && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {/* Referral Overview Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-slate-900 text-white p-6 rounded-[2rem] border border-slate-800 shadow-xl relative overflow-hidden group">
+                    <div className="absolute -right-4 -bottom-4 text-white/5 group-hover:scale-110 transition-transform duration-500">
+                      <Share2 size={120} />
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Own Referral Code</p>
+                    <div className="flex items-center gap-3">
+                      <p className="text-3xl font-black tracking-tighter">{referralData?.referral_code || 'N/A'}</p>
+                      <button className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
+                        <Gift size={16} className="text-indigo-400" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-indigo-600 text-white p-6 rounded-[2rem] shadow-xl shadow-indigo-200 relative overflow-hidden group">
+                    <div className="absolute -right-4 -bottom-4 text-white/10 group-hover:scale-110 transition-transform duration-500">
+                      <Users size={120} />
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200 mb-2">Total Referrals</p>
+                    <p className="text-4xl font-black tracking-tighter">{referralData?.stats?.total_referrals || 0}</p>
+                    <p className="text-[10px] font-bold text-indigo-200 mt-2">Active networked users</p>
+                  </div>
+
+                  <div className="bg-emerald-500 text-white p-6 rounded-[2rem] shadow-xl shadow-emerald-100 relative overflow-hidden group">
+                    <div className="absolute -right-4 -bottom-4 text-white/10 group-hover:scale-110 transition-transform duration-500">
+                      <TrendingUp size={120} />
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100 mb-2">Referral Earnings</p>
+                    <p className="text-4xl font-black tracking-tighter">₹{referralData?.stats?.total_earnings?.toLocaleString() || 0}</p>
+                    <p className="text-[10px] font-bold text-emerald-100 mt-2">Total bonus credited</p>
+                  </div>
+                </div>
+
+                {/* Referred By Section */}
+                <div className="bg-slate-50 p-6 sm:p-8 rounded-[2rem] border border-slate-200">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 px-2">Referred By</h4>
+                  {referralData?.referrer ? (
+                    <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                      <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center font-black">
+                        {referralData.referrer.full_name?.charAt(0) || '?'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-slate-900">{referralData.referrer.full_name || 'System User'}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{referralData.referrer.phone}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white p-6 rounded-2xl border border-slate-100 border-dashed text-center">
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No Referrer (Direct Signup)</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Referrals Table */}
+                <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden">
+                  <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">Network Connections</h4>
+                  </div>
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+                        <th className="px-6 py-4">User Details</th>
+                        <th className="px-6 py-4">Phone Number</th>
+                        <th className="px-6 py-4 text-right">Joined Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {referralData?.referrals?.length > 0 ? (
+                        referralData.referrals.map((r: any) => (
+                          <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center text-[10px] font-black">
+                                  {r.name?.charAt(0)}
+                                </div>
+                                <span className="text-xs font-black text-slate-800">{r.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                              {r.phone}
+                            </td>
+                            <td className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                              {r.joinedAt}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={3} className="px-6 py-12 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest italic opacity-50">
+                            No referrals yet
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}

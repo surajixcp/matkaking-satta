@@ -1,5 +1,6 @@
 const {
-    User, Wallet, Bid, Deposit, WithdrawRequest, WalletTransaction, Otp, FcmToken, sequelize
+    User, Wallet, Bid, Deposit, WithdrawRequest, WalletTransaction, Otp, FcmToken,
+    ReferralTransaction, Market, GameType, sequelize
 } = require('../../db/models');
 const { Op } = require('sequelize');
 
@@ -185,14 +186,17 @@ class AdminService {
      */
     async getUserHistory(userId) {
         const user = await User.findByPk(userId, {
-            include: [{ model: Wallet, as: 'wallet' }]
+            include: [
+                { model: Wallet, as: 'wallet' },
+                { model: User, as: 'referrer', attributes: ['id', 'full_name', 'phone'] }
+            ]
         });
 
         if (!user) throw new Error('User not found');
 
         const transactions = await WalletTransaction.findAll({
             where: { wallet_id: user.wallet.id },
-            order: [['createdAt', 'DESC']] // Changed created_at to createdAt
+            order: [['createdAt', 'DESC']]
         });
 
         const withdrawals = await WithdrawRequest.findAll({
@@ -209,6 +213,19 @@ class AdminService {
             order: [['created_at', 'DESC']]
         });
 
+        // Referral Stats
+        const totalReferrals = await User.count({ where: { referred_by: userId } });
+        const totalReferralEarnings = await ReferralTransaction.sum('amount', {
+            where: { referrer_id: userId, status: 'completed' }
+        }) || 0;
+
+        // Referrals List
+        const referrals = await User.findAll({
+            where: { referred_by: userId },
+            attributes: ['id', 'full_name', 'phone', 'createdAt'],
+            order: [['createdAt', 'DESC']]
+        });
+
         // Calculate total winnings
         const totalWinnings = await Bid.sum('win_amount', {
             where: {
@@ -217,7 +234,26 @@ class AdminService {
             }
         }) || 0;
 
-        return { transactions, withdrawals, bids, totalWinnings };
+        return {
+            transactions,
+            withdrawals,
+            bids,
+            totalWinnings,
+            referral_data: {
+                referral_code: user.referral_code,
+                referrer: user.referrer,
+                stats: {
+                    total_referrals: totalReferrals,
+                    total_earnings: parseFloat(totalReferralEarnings)
+                },
+                referrals: referrals.map(r => ({
+                    id: r.id,
+                    name: r.full_name,
+                    phone: r.phone,
+                    joinedAt: r.createdAt
+                }))
+            }
+        };
     }
     /**
      * Delete user by ID

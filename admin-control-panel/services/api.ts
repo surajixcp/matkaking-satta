@@ -86,10 +86,21 @@ export const userService = {
     },
     getUserHistory: async (id: string, name: string = 'Unknown') => {
         const response = await api.get(`/admin/users/${id}/history`);
-        const { transactions, withdrawals, totalWinnings } = response.data.data;
+        const { transactions, withdrawals, totalWinnings, referral_data } = response.data.data;
 
         return {
             totalWinnings: parseFloat(totalWinnings || '0'),
+            referral_data: referral_data ? {
+                referral_code: referral_data.referral_code,
+                referrer: referral_data.referrer,
+                stats: referral_data.stats,
+                referrals: referral_data.referrals.map((r: any) => ({
+                    id: r.id.toString(),
+                    name: r.name || 'N/A',
+                    phone: r.phone,
+                    joinedAt: new Date(r.joinedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                }))
+            } : null,
             transactions: transactions.map((t: any) => ({
                 id: `${t.id}`,
                 user: name,

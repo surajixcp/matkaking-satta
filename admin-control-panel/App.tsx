@@ -15,6 +15,7 @@ import SettingsScreen from './screens/SettingsScreen';
 import RolesScreen from './screens/RolesScreen';
 import UserProfileScreen from './screens/UserProfileScreen';
 import ReferralScreen from './screens/ReferralScreen';
+import AdminAccountsScreen from './screens/AdminAccountsScreen';
 import Layout from './components/Layout';
 import { authService, dashboardService, userService, marketService, resultService, noticeService } from './services/api';
 import { useEffect } from 'react';
@@ -160,6 +161,8 @@ const App: React.FC = () => {
         return <RolesScreen roles={roles} setRoles={setRoles} />;
       case Screen.REFERRALS:
         return <ReferralScreen />;
+      case Screen.ADMIN_ACCOUNTS:
+        return <AdminAccountsScreen />;
       default:
         return <DashboardScreen users={users} transactions={transactions} onNavigate={setCurrentScreen} />;
     }

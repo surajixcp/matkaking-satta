@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X, Bell, User as UserIcon, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Screen } from '../types';
 import { NAV_ITEMS } from '../constants';
+import { authService } from '../services/api';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,15 +13,13 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, activeScreen, onNavigate, onLogout }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
+  const adminData = authService.getAdminData();
 
   useEffect(() => {
     const handleResize = () => {
-      // Logic for mobile resizing: close sidebar if screen becomes small
       if (window.innerWidth < 1024 && isSidebarOpen) {
         setSidebarOpen(false);
       } else if (window.innerWidth >= 1024 && !isSidebarOpen) {
-        // On desktop, we default to open (expanded), but user choice should persist ideally. 
-        // For simplicity, let's keep it expanded on resize up.
         setSidebarOpen(true);
       }
     };
@@ -29,11 +28,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeScreen, onNavigate, onL
     return () => window.removeEventListener('resize', handleResize);
   }, [isSidebarOpen]);
 
-  // Sidebar width logic
-  // Mobile: w-64 fixed
-  // Desktop: w-64 (Open) vs w-20 (Closed)
-
   const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
+
+  const filteredNavItems = NAV_ITEMS.filter(item => {
+    if (!adminData || !adminData.permissions) return false;
+    if (adminData.role === 'Super Admin') return true;
+    return !!adminData.permissions[item.permission];
+  });
 
   return (
     <div className="flex min-h-screen bg-[#f8fafc] overflow-x-hidden selection:bg-indigo-100 selection:text-indigo-900">
@@ -61,7 +62,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeScreen, onNavigate, onL
 
           {/* Navigation */}
           <nav className={`flex-1 ${isSidebarOpen ? 'px-3' : 'px-2'} py-6 space-y-1 overflow-y-auto custom-scrollbar transition-all duration-300`}>
-            {NAV_ITEMS.map((item) => (
+            {filteredNavItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => {
@@ -138,8 +139,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeScreen, onNavigate, onL
                 <UserIcon size={16} />
               </div>
               <div className="text-left hidden lg:block">
-                <p className="text-xs font-bold text-slate-800 leading-none">Admin User</p>
-                <p className="text-[10px] text-slate-500 mt-0.5 font-medium">Super Control</p>
+                <p className="text-xs font-bold text-slate-800 leading-none">{adminData?.name || 'Admin User'}</p>
+                <p className="text-[10px] text-slate-500 mt-0.5 font-medium">{adminData?.role || 'Moderator'}</p>
               </div>
             </div>
           </div>

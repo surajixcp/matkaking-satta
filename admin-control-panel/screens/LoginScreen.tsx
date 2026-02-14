@@ -13,23 +13,30 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const form = e.target as HTMLFormElement;
+    const phoneInput = form.querySelector('input[name="phone"]') as HTMLInputElement;
+    const pinInput = form.querySelector('input[name="pin"]') as HTMLInputElement;
+
+    const phone = phoneInput.value;
+    const pin = pinInput.value;
+
+    // Validate Phone (10 digits)
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(phone)) {
+      alert("Phone number must be exactly 10 digits");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const form = e.target as HTMLFormElement;
-      const phoneInput = form.querySelector('input[name="phone"]') as HTMLInputElement;
-      const passwordInput = form.querySelector('input[name="password"]') as HTMLInputElement;
-
-      const phone = phoneInput.value;
-      const password = passwordInput.value;
-
       // Use the actual auth service
-      await authService.login(phone, password);
+      await authService.login(phone, pin);
       onLogin();
-
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed", error);
-      alert("Login failed. Check credentials.");
+      alert(error.response?.data?.error || "Login failed. Check credentials.");
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +77,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-slate-300">MPIN / Password</label>
+                <label className="block text-sm font-medium text-slate-300">Admin Security PIN</label>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
@@ -78,9 +85,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
-                  name="password"
+                  name="pin"
                   required
-                  defaultValue="1234"
+                  placeholder="Enter 4-6 digit PIN"
                   className="w-full bg-slate-900/50 border border-slate-700 text-white pl-11 pr-12 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                 />
                 <button

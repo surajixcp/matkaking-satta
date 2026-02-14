@@ -1,31 +1,46 @@
 const adminService = require('../services/admin.service');
-const { User } = require('../../db/models');
+const { Admin, Role, User, sequelize } = require('../../db/models');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
+/**
+ * Admin Login using Phone and PIN
+ */
 exports.adminLogin = async (req, res, next) => {
     try {
-        const { phone, password, mpin } = req.body;
+        const { phone, pin } = req.body;
 
-        // Simple check for now - In production use proper password hashing
-        // This assumes you manually seeded an admin user with role='admin'
-        const admin = await User.findOne({ where: { phone, role: 'admin' } });
+        if (!phone || !pin) {
+            return res.status(400).json({ success: false, error: 'Phone and PIN are required' });
+        }
+
+        // 1. Find Admin by Phone
+        const admin = await Admin.findOne({
+            where: { phone },
+            include: [{ model: Role, as: 'role' }]
+        });
 
         if (!admin) {
             return res.status(401).json({ success: false, error: 'Invalid admin credentials' });
         }
 
-        // Verify password/MPIN using the model instance method (which handles bcrypt)
-        // Note: The input field from frontend is 'password' but mapped to 'mpin' in the API call currently.
-        // We will check against the hash.
-        const isValid = await admin.validateMpin(mpin || password); // Check mpin or password field
+        if (admin.status === 'blocked') {
+            return res.status(403).json({ success: false, error: 'Your admin account has been blocked' });
+        }
+
+        // 2. Verify PIN
+        const isValid = await admin.validatePin(pin);
 
         if (!isValid) {
             return res.status(401).json({ success: false, error: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ id: admin.id, role: admin.role }, process.env.JWT_SECRET, {
-            expiresIn: '1d'
-        });
+        // 3. Generate Token
+        const token = jwt.sign(
+            { id: admin.id, role: admin.role?.name || 'admin' },
+            process.env.JWT_SECRET,
+            { expiresIn: '1d' }
+        );
 
         res.status(200).json({
             success: true,
@@ -33,10 +48,138 @@ exports.adminLogin = async (req, res, next) => {
             admin: {
                 id: admin.id,
                 name: admin.full_name,
-                role: admin.role
+                role: admin.role?.name,
+                permissions: admin.role?.permissions || {}
             }
         });
 
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * --- ROLE MANAGEMENT ---
+ */
+
+exports.getRoles = async (req, res, next) => {
+    try {
+        const roles = await Role.findAll({
+            include: [{
+                model: Admin,
+                as: 'admins',
+                attributes: [[sequelize.fn('COUNT', sequelize.col('admins.id')), 'count']]
+            }],
+            group: ['Role.id']
+        });
+        res.status(200).json({ success: true, data: roles });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.createRole = async (req, res, next) => {
+    try {
+        const role = await Role.create(req.body);
+        res.status(201).json({ success: true, data: role });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.updateRole = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const role = await Role.findByPk(id);
+        if (!role) return res.status(404).json({ success: false, error: 'Role not found' });
+
+        await role.update(req.body);
+        res.status(200).json({ success: true, data: role });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.deleteRole = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const role = await Role.findByPk(id);
+        if (!role) return res.status(404).json({ success: false, error: 'Role not found' });
+
+        // Check if role has assigned admins
+        const adminCount = await Admin.count({ where: { role_id: id } });
+        if (adminCount > 0) {
+            return res.status(400).json({ success: false, error: 'Cannot delete role with assigned admins' });
+        }
+
+        await role.destroy();
+        res.status(200).json({ success: true, message: 'Role deleted' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * --- ADMIN MANAGEMENT ---
+ */
+
+exports.getAdmins = async (req, res, next) => {
+    try {
+        const admins = await Admin.findAll({
+            include: [{ model: Role, as: 'role', attributes: ['name'] }],
+            attributes: { exclude: ['pin_hash'] }
+        });
+        res.status(200).json({ success: true, data: admins });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.createAdminAccount = async (req, res, next) => {
+    try {
+        const { phone, pin, role_id, full_name } = req.body;
+
+        const pin_hash = await bcrypt.hash(pin, 10);
+
+        const admin = await Admin.create({
+            phone,
+            pin_hash,
+            role_id,
+            full_name,
+            created_by: req.admin?.id
+        });
+
+        res.status(201).json({ success: true, data: admin });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.updateAdminStatus = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        const admin = await Admin.findByPk(id);
+        if (!admin) return res.status(404).json({ success: false, error: 'Admin not found' });
+
+        admin.status = status;
+        await admin.save();
+        res.status(200).json({ success: true, data: admin });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.resetAdminPin = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { pin } = req.body;
+        const admin = await Admin.findByPk(id);
+        if (!admin) return res.status(404).json({ success: false, error: 'Admin not found' });
+
+        admin.pin_hash = await bcrypt.hash(pin, 10);
+        await admin.save();
+        res.status(200).json({ success: true, message: 'PIN reset successful' });
     } catch (error) {
         next(error);
     }
@@ -64,7 +207,7 @@ exports.getUsers = async (req, res, next) => {
     }
 };
 
-exports.updateUserStatus = async (req, res, next) => {
+exports.updateUserInfoByAdmin = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { status } = req.body;

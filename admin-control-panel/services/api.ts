@@ -27,8 +27,8 @@ api.interceptors.request.use(
 );
 
 export const authService = {
-    login: async (phone: string, mpin: string) => {
-        const response = await api.post('/admin/login', { phone, mpin });
+    login: async (phone: string, pin: string) => {
+        const response = await api.post('/admin/login', { phone, pin });
         if (response.data.success) {
             localStorage.setItem('admin_token', response.data.token);
             localStorage.setItem('admin_user', JSON.stringify(response.data.admin));
@@ -41,6 +41,10 @@ export const authService = {
     },
     isAuthenticated: () => {
         return !!localStorage.getItem('admin_token');
+    },
+    getAdminData: () => {
+        const admin = localStorage.getItem('admin_user');
+        return admin ? JSON.parse(admin) : null;
     }
 };
 
@@ -319,14 +323,38 @@ export const scraperService = {
     }
 };
 
-export const referralService = {
-    getSettings: async () => {
-        const response = await api.get('/referral/settings');
+export const rbacService = {
+    getRoles: async () => {
+        const response = await api.get('/admin/roles');
         return response.data.data;
     },
-    updateSettings: async (data: any) => {
-        const response = await api.put('/referral/settings', data);
+    createRole: async (data: any) => {
+        const response = await api.post('/admin/roles', data);
         return response.data.data;
+    },
+    updateRole: async (id: string, data: any) => {
+        const response = await api.put(`/admin/roles/${id}`, data);
+        return response.data.data;
+    },
+    deleteRole: async (id: string) => {
+        const response = await api.delete(`/admin/roles/${id}`);
+        return response.data;
+    },
+    getAdminAccounts: async () => {
+        const response = await api.get('/admin/accounts');
+        return response.data.data;
+    },
+    createAdminAccount: async (data: any) => {
+        const response = await api.post('/admin/accounts', data);
+        return response.data.data;
+    },
+    updateAdminStatus: async (id: string, status: string) => {
+        const response = await api.put(`/admin/accounts/${id}/status`, { status });
+        return response.data.data;
+    },
+    resetAdminPin: async (id: string, pin: string) => {
+        const response = await api.post(`/admin/accounts/${id}/reset-pin`, { pin });
+        return response.data;
     }
 };
 

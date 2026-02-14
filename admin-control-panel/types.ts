@@ -12,7 +12,8 @@ export enum Screen {
   SETTINGS = 'settings',
   ROLES = 'roles',
   DEPOSITS = 'deposits',
-  REFERRALS = 'referrals'
+  REFERRALS = 'referrals',
+  ADMIN_ACCOUNTS = 'admin_accounts'
 }
 
 export interface ReferralSetting {
@@ -75,12 +76,11 @@ export interface DeclaredResult {
 }
 
 export interface Role {
-  id: string;
+  id: number;
   name: string;
   description: string;
-  level: string;
-  users: number;
-  permissions: string[];
+  permissions: Record<string, boolean>;
+  admins?: { count: number }[]; // From the group join
 }
 
 export interface WithdrawalRequest {

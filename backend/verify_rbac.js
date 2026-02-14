@@ -7,18 +7,10 @@ async function verify() {
         await sequelize.authenticate();
         console.log('Database connected.');
 
-        console.log('Running migrations...');
-        // We can't easily run sequelize migrations from here without umzug, 
-        // but we can sync the models or run the specific SQL if needed.
-        // For verification, let's just try to create the tables if they don't exist.
-        await sequelize.sync({ alter: true });
-        console.log('Database synced.');
-
-        // Seed Super Admin if not exists
-        let superAdminRole = await Role.findOne({ where: { name: 'Super Admin' } });
-        if (!superAdminRole) {
-            superAdminRole = await Role.create({
-                name: 'Super Admin',
+        // Seed Super Admin role if not exists
+        let [superAdminRole] = await Role.findOrCreate({
+            where: { name: 'Super Admin' },
+            defaults: {
                 permissions: {
                     user_view: true,
                     user_edit: true,
@@ -31,9 +23,10 @@ async function verify() {
                     rbac_manage: true
                 },
                 description: 'Full system access'
-            });
-            console.log('Super Admin role created.');
-        }
+            }
+        });
+
+        console.log('Super Admin role verified.');
 
         const adminPhone = '9999999999';
         let admin = await Admin.findOne({ where: { phone: adminPhone } });
@@ -46,15 +39,22 @@ async function verify() {
                 role_id: superAdminRole.id,
                 status: 'active'
             });
-            console.log('Super Admin account created: 9999999999 / 1234');
+            console.log('✅ Super Admin account created: 9999999999 / 1234');
         } else {
-            console.log('Super Admin account already exists.');
+            console.log('ℹ️ Super Admin account already exists.');
+            // Ensure it has the correct role
+            await admin.update({ role_id: superAdminRole.id, status: 'active' });
+            console.log('✅ Super Admin account permissions updated.');
         }
 
         console.log('Verification script completed successfully.');
         process.exit(0);
     } catch (error) {
-        console.error('Verification failed:', error);
+        console.error('❌ Verification failed:', error.message);
+        if (error.message.includes('getaddrinfo')) {
+            console.error('\n⚠️  CONNECTION ERROR: It seems you are trying to connect to a Render internal hostname from your local machine.');
+            console.error('Please update the DATABASE_URL in your backend/.env to the EXTERNAL Database URL provided by Render.');
+        }
         process.exit(1);
     }
 }

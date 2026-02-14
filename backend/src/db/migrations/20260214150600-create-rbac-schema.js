@@ -87,7 +87,7 @@ module.exports = {
         });
 
         // 3. Seed initial Super Admin role
-        await queryInterface.bulkInsert('Roles', [{
+        const [role] = await queryInterface.bulkInsert('Roles', [{
             name: 'Super Admin',
             permissions: JSON.stringify({
                 user_view: true,
@@ -101,6 +101,21 @@ module.exports = {
                 rbac_manage: true
             }),
             description: 'Full system access',
+            createdAt: new Date(),
+            updatedAt: new Date()
+        }], { returning: ['id'] });
+
+        // 4. Seed initial Super Admin user
+        // PIN '1234' hashed with bcrypt
+        const bcrypt = require('bcryptjs');
+        const pinHash = await bcrypt.hash('1234', 10);
+
+        await queryInterface.bulkInsert('Admins', [{
+            full_name: 'Super Admin',
+            phone: '9999999999',
+            pin_hash: pinHash,
+            role_id: role.id,
+            status: 'active',
             createdAt: new Date(),
             updatedAt: new Date()
         }]);

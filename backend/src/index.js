@@ -10,7 +10,7 @@ const compression = require('compression');
 const { createServer } = require('http');
 const { Server } = require("socket.io");
 const resultFetcherService = require('./app/services/result-fetcher.service');
-const { startHeartbeat, sequelize, User, Wallet } = require('./db/models');
+const { startHeartbeat, sequelize, User, Wallet, Admin, Role } = require('./db/models');
 const bcrypt = require('bcryptjs');
 
 const app = express();
@@ -121,6 +121,44 @@ async function initDatabase() {
             console.log('📋 Admin Credentials: Phone: 9999999999, MPIN: 1234');
         } else {
             console.log('✅ Admin user already exists');
+        }
+
+        // --- New RBAC Seeding ---
+        console.log('🔗 Checking RBAC system...');
+        let [superAdminRole] = await Role.findOrCreate({
+            where: { name: 'Super Admin' },
+            defaults: {
+                permissions: {
+                    user_view: true,
+                    user_edit: true,
+                    user_delete: true,
+                    market_manage: true,
+                    result_declare: true,
+                    withdraw_approve: true,
+                    deposit_approve: true,
+                    settings_edit: true,
+                    rbac_manage: true
+                },
+                description: 'Full system access'
+            }
+        });
+
+        const rbacAdminPhone = '9999999999';
+        const existingRbacAdmin = await Admin.findOne({ where: { phone: rbacAdminPhone } });
+
+        if (!existingRbacAdmin) {
+            console.log('👤 Seeding Super Admin role account...');
+            const pinHash = await bcrypt.hash('1234', 10);
+            await Admin.create({
+                full_name: 'Super Admin',
+                phone: rbacAdminPhone,
+                pin_hash: pinHash,
+                role_id: superAdminRole.id,
+                status: 'active'
+            });
+            console.log('✅ RBAC Super Admin seeded: 9999999999 / 1234');
+        } else {
+            console.log('✅ RBAC Super Admin already exists');
         }
 
     } catch (error) {

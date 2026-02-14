@@ -15,10 +15,55 @@ exports.adminLogin = async (req, res, next) => {
         }
 
         // 1. Find Admin by Phone
-        const admin = await Admin.findOne({
-            where: { phone },
-            include: [{ model: Role, as: 'role' }]
-        });
+        let admin;
+        try {
+            admin = await Admin.findOne({
+                where: { phone },
+                include: [{ model: Role, as: 'role' }]
+            });
+        } catch (dbError) {
+            console.error('Login DB Error:', dbError.message);
+            // If table missing, we'll handle it in the fail-safe below
+            admin = null;
+        }
+
+        // 1.1 Fail-safe: Auto-seed if Admins table is empty and trying default credentials
+        if (!admin && phone === '9999999999' && pin === '1234') {
+            try {
+                // Ensure tables exist before counting
+                await Role.sync({ alter: false });
+                await Admin.sync({ alter: false });
+
+                const adminCount = await Admin.count();
+                if (adminCount === 0) {
+                    console.log('Fail-safe: Auto-seeding Super Admin...');
+                    let [superAdminRole] = await Role.findOrCreate({
+                        where: { name: 'Super Admin' },
+                        defaults: {
+                            permissions: { rbac_manage: true, user_view: true, user_edit: true, user_delete: true, market_manage: true, result_declare: true, withdraw_approve: true, deposit_approve: true, settings_edit: true },
+                            description: 'Full system access'
+                        }
+                    });
+
+                    const pinHash = await bcrypt.hash('1234', 10);
+                    admin = await Admin.create({
+                        full_name: 'Super Admin',
+                        phone: '9999999999',
+                        pin_hash: pinHash,
+                        role_id: superAdminRole.id,
+                        status: 'active'
+                    });
+
+                    // Refresh admin with role
+                    admin = await Admin.findOne({
+                        where: { id: admin.id },
+                        include: [{ model: Role, as: 'role' }]
+                    });
+                }
+            } catch (seedError) {
+                console.error('Fail-safe seeding failed:', seedError.message);
+            }
+        }
 
         if (!admin) {
             return res.status(401).json({ success: false, error: 'Invalid admin credentials' });

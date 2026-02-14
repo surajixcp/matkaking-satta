@@ -34,8 +34,14 @@ module.exports = {
     production: {
         ...dbConfig,
         logging: false,
+        dialectOptions: {
+            ssl: {
+                require: true,
+                rejectUnauthorized: false
+            }
+        },
         pool: {
-            max: 5,
+            max: 10,
             min: 1,
             acquire: 60000,
             idle: 10000,

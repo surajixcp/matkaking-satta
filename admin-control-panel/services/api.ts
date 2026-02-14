@@ -358,4 +358,15 @@ export const rbacService = {
     }
 };
 
+export const referralService = {
+    getSettings: async () => {
+        const response = await api.get('/settings/referral');
+        return response.data.data;
+    },
+    updateSettings: async (settings: any) => {
+        const response = await api.post('/settings/referral', settings);
+        return response.data.data;
+    }
+};
+
 export default api;

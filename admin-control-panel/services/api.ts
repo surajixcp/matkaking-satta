@@ -361,11 +361,11 @@ export const rbacService = {
 
 export const referralService = {
     getSettings: async () => {
-        const response = await api.get('/settings/referral');
+        const response = await api.get('/referral/settings');
         return response.data.data;
     },
     updateSettings: async (settings: any) => {
-        const response = await api.post('/settings/referral', settings);
+        const response = await api.put('/referral/settings', settings);
         return response.data.data;
     }
 };

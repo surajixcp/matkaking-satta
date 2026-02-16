@@ -7,7 +7,7 @@ const { protect, authorize } = require('../middlewares/auth.middleware');
 router.get('/stats', protect, referralController.getStats);
 
 // Admin Routes
-router.get('/settings', protect, authorize('admin'), referralController.getSettings);
+router.get('/settings', protect, referralController.getSettings);
 router.put('/settings', protect, authorize('admin'), referralController.updateSettings);
 
 module.exports = router;

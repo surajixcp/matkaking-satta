@@ -127,18 +127,25 @@ class ResultsService {
     async _processSessionWins(marketId, session, single, panna, transaction) {
         // 1. Fetch Game Types with Flexible Matching
         const gameTypes = await GameType.findAll();
-        // Helper to find GameType by name (case-insensitive) via keywords
-        const findGT = (keywords) => gameTypes.find(gt => keywords.some(k => gt.name.toLowerCase() === k.toLowerCase() || gt.name.toLowerCase().includes(k.toLowerCase())));
-        const getGTByName = (name) => gameTypes.find(gt => gt.name.toLowerCase() === name.toLowerCase());
 
-        // Use exact or specific matching for sensitive types
-        const singleGT = getGTByName('Single Digit') || findGT(['single digit']);
-        const singlePattiGT = getGTByName('Single Patti') || findGT(['single patti', 'single panna']);
-        const doublePattiGT = getGTByName('Double Patti') || findGT(['double patti', 'double panna']);
-        const triplePattiGT = getGTByName('Triple Patti') || findGT(['triple patti', 'triple panna']);
+        // Helper to find GameType by name (case-insensitive) via keywords or exact match
+        const findGT = (keywords) => gameTypes.find(gt => {
+            const name = gt.name.toLowerCase();
+            return keywords.some(k => name === k.toLowerCase() || name.includes(k.toLowerCase()));
+        });
+
+        // Use more robust matching
+        // "Single" might be "Single Digit" or just "Single" in DB
+        const singleGT = findGT(['single digit', 'single']) || findGT(['digit']);
+        const singlePattiGT = findGT(['single patti', 'single panna', 'single panel']);
+        const doublePattiGT = findGT(['double patti', 'double panna', 'double panel']);
+        const triplePattiGT = findGT(['triple patti', 'triple panna', 'triple panel']);
+
+        // Log found GameTypes for debugging
+        console.log(`[WinProcess] GT IDs: Single=${singleGT?.id}, SP=${singlePattiGT?.id}, DP=${doublePattiGT?.id}, TP=${triplePattiGT?.id}`);
 
         // Log if any critical game type is missing
-        if (!singleGT) console.warn("[Warning] 'Single Digit' GameType not found!");
+        if (!singleGT) console.warn("[Warning] 'Single Digit' GameType not found! Check DB GameTypes.");
 
         // 2. Determine Patti Type
         const pannaDigits = panna.split('').sort();
@@ -223,14 +230,17 @@ class ResultsService {
         const { openPanna, openSingle, closePanna, closeSingle } = results;
 
         // 1. Fetch Game Types with Flexible Matching
+        // 1. Fetch Game Types with Flexible Matching
         const gameTypes = await GameType.findAll();
-        // Helper to find GameType by name (case-insensitive) via keywords
-        const findGT = (keywords) => gameTypes.find(gt => keywords.some(k => gt.name.toLowerCase().includes(k.toLowerCase())));
-        const getGTByName = (name) => gameTypes.find(gt => gt.name.toLowerCase() === name.toLowerCase());
 
-        const jodiGT = getGTByName('Jodi Digit') || findGT(['jodi', 'pair']);
-        const halfSangamGT = getGTByName('Half Sangam') || findGT(['half sangam']);
-        const fullSangamGT = getGTByName('Full Sangam') || findGT(['full sangam', 'sangam']);
+        const findGT = (keywords) => gameTypes.find(gt => {
+            const name = gt.name.toLowerCase();
+            return keywords.some(k => name === k.toLowerCase() || name.includes(k.toLowerCase()));
+        });
+
+        const jodiGT = findGT(['jodi digit', 'jodi']) || findGT(['pair']);
+        const halfSangamGT = findGT(['half sangam']);
+        const fullSangamGT = findGT(['full sangam', 'sangam']);
 
         // 2. Define Winning Combinations
         const winningJodi = `${openSingle}${closeSingle}`;

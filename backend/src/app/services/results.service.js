@@ -144,6 +144,14 @@ class ResultsService {
         // Log found GameTypes for debugging
         console.log(`[WinProcess] GT IDs: Single=${singleGT?.id}, SP=${singlePattiGT?.id}, DP=${doublePattiGT?.id}, TP=${triplePattiGT?.id}`);
 
+        // VALIDATION: If critical GameTypes are missing, we CANNOT process wins correctly.
+        if (!singleGT) {
+            console.error("[CRITICAL] 'Single Digit' GameType not found! Win distribution for Single will fail.");
+        }
+        if (!singlePattiGT) {
+            console.error("[CRITICAL] 'Single Patti' GameType not found! Win distribution for Patti will fail.");
+        }
+
         // Log if any critical game type is missing
         if (!singleGT) console.warn("[Warning] 'Single Digit' GameType not found! Check DB GameTypes.");
 

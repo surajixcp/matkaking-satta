@@ -35,6 +35,34 @@ app.get('/', (req, res) => {
     res.json({ message: 'Welcome to Matka King Backend API', status: 'OK', timestamp: new Date() });
 });
 
+// Temporary Route to fix old results (Run once then remove)
+app.get('/fix-old-results-temp', async (req, res) => {
+    const resultsService = require('./app/services/results.service');
+    const { Market } = require('./db/models');
+
+    try {
+        const sridevi = await Market.findOne({ where: { name: 'SRIDEVI' } });
+        const milanDay = await Market.findOne({ where: { name: 'MILAN DAY' } });
+
+        const results = [];
+
+        if (sridevi) {
+            await resultsService.reprocessResults(sridevi.id, '2026-02-16');
+            await resultsService.reprocessResults(sridevi.id, '2026-02-13');
+            results.push('Processed SRIDEVI for 16th and 13th');
+        }
+
+        if (milanDay) {
+            await resultsService.reprocessResults(milanDay.id, '2026-02-12');
+            results.push('Processed MILAN DAY for 12th');
+        }
+
+        res.json({ success: true, message: 'Batch reprocess complete', details: results });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Routes
 app.use('/api/v1', require('./app/routes'));
 

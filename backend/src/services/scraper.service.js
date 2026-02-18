@@ -7,7 +7,12 @@ async function fetchDPBossResults() {
         const url = "https://www.dpboss.boston";
 
         console.log(`[Scraper] Fetching data from ${url}...`);
-        const response = await axios.get(url);
+        const response = await axios.get(url, {
+            timeout: 10000, // 10 seconds timeout
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
         const html = response.data;
 
         const $ = cheerio.load(html);

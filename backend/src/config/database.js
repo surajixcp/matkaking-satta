@@ -34,12 +34,9 @@ module.exports = {
     production: {
         ...dbConfig,
         logging: false,
-        dialectOptions: {
-            ssl: {
-                require: true,
-                rejectUnauthorized: false
-            }
-        },
+        dialectOptions: process.env.NODE_ENV === "production" && process.env.DB_SSL === "true"
+            ? { ssl: { require: true, rejectUnauthorized: false } }
+            : {},
         pool: {
             max: 10,
             min: 1,

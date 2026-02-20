@@ -9,7 +9,6 @@ const morgan = require('morgan');
 const compression = require('compression');
 const { createServer } = require('http');
 const { Server } = require("socket.io");
-const resultFetcherService = require('./app/services/result-fetcher.service');
 const { startHeartbeat, sequelize, User, Wallet, Admin, Role } = require('./db/models');
 const bcrypt = require('bcryptjs');
 
@@ -206,7 +205,6 @@ initDatabase().then(() => {
         // Delay cron jobs to ensure server is fully up and ready to handle requests
         setTimeout(() => {
             console.log('⏰ Starting Cron Jobs...');
-            resultFetcherService.init(); // Start Cron Jobs
             startHeartbeat(); // Start DB heartbeat to prevent sleep
 
             // Start OTP cleanup cron

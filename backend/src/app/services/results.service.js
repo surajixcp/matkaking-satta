@@ -176,7 +176,7 @@ class ResultsService {
         const bids = await Bid.findAll({
             where: {
                 market_id: marketId,
-                session: { [Op.iLike]: normalizedSession }, // Case-insensitive session match
+                session: normalizedSession, // ENUM exact match
                 status: 'pending',
                 game_type_id: { [Op.in]: targetGameTypeIds }
             },

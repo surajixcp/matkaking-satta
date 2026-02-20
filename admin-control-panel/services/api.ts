@@ -202,10 +202,6 @@ export const resultService = {
     getHistory: async () => {
         const response = await api.get('/results');
         return response.data.data;
-    },
-    revoke: async (id: string) => {
-        const response = await api.delete(`/results/${id}`);
-        return response;
     }
 }
 

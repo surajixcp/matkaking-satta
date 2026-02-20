@@ -126,7 +126,7 @@ const startResultFetcher = () => {
                                                 session: 'Open',
                                                 panna: parsed.openPanna,
                                                 single: parsed.openDigit,
-                                                declaredBy: 'admin'
+                                                declaredBy: 'system'
                                             });
                                             declaredCount++;
                                             console.log(`[Auto-Declare] ✅ OPEN Validated & Declared for ${market.name}`);
@@ -155,7 +155,7 @@ const startResultFetcher = () => {
                                                 session: 'Close',
                                                 panna: parsed.closePanna,
                                                 single: parsed.closeDigit,
-                                                declaredBy: 'admin'
+                                                declaredBy: 'system'
                                             });
                                             declaredCount++;
                                             console.log(`[Auto-Declare] ✅ CLOSE Validated & Declared for ${market.name}`);

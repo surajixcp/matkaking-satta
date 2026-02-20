@@ -147,6 +147,10 @@ class ResultsService {
         const triplePattiGT = findGT(['triple patti', 'triple panna', 'triple panel', 'tp']);
 
         // Log found GameTypes for debugging
+        console.log(`\n--- DEBUG SESSION WINS ---`);
+        console.log(`[WinProcess Debug] marketId: ${marketId}, session: ${normalizedSession}`);
+        console.log(`[WinProcess Debug] Received Panna: '${panna}', Single: '${single}'`);
+        console.log(`[WinProcess] GT IDs: Single=${singleGT?.id}, SP=${singlePattiGT?.id}, DP=${doublePattiGT?.id}, TP=${triplePattiGT?.id}`);
         console.log(`[WinProcess] GT IDs: Single=${singleGT?.id}, SP=${singlePattiGT?.id}, DP=${doublePattiGT?.id}, TP=${triplePattiGT?.id}`);
 
         // VALIDATION: If critical GameTypes are missing, we CANNOT process wins correctly.
@@ -172,18 +176,21 @@ class ResultsService {
         // 3. Find Pending Bids for this Session
         // We fetch ALL pending bids for this market/session to mark wins AND losses
         const targetGameTypeIds = [singleGT?.id, singlePattiGT?.id, doublePattiGT?.id, triplePattiGT?.id].filter(id => id);
-
         const bids = await Bid.findAll({
             where: {
                 market_id: marketId,
-                session: normalizedSession, // ENUM exact match
+                session: sequelize.where(sequelize.fn('LOWER', sequelize.col('session')), normalizedSession), // Case-insensitive exact match
                 status: 'pending',
                 game_type_id: { [Op.in]: targetGameTypeIds }
             },
             transaction
         });
 
+        console.log(`[Wins] Query Params: market_id=${marketId}, session = '${normalizedSession}', status = 'pending', game_type in [${targetGameTypeIds.join(',')}]`);
         console.log(`[Wins] Found ${bids.length} pending bids for ${normalizedSession} session.`);
+
+        const allPending = await Bid.count({ where: { market_id: marketId, status: 'pending' }, transaction });
+        console.log(`[Wins] Total pending bids in market regardless of session / type: ${allPending} `);
 
         // 4. Process Bids
         for (const bid of bids) {
@@ -196,7 +203,7 @@ class ResultsService {
                 if (bid.digit === single) {
                     isWin = true;
                     rate = singleGT.rate;
-                    winDescription = `Win: Single Digit ${single}`;
+                    winDescription = `Win: Single Digit ${single} `;
                 }
             }
             // Check Patti Win
@@ -204,7 +211,7 @@ class ResultsService {
                 if (bid.digit === panna) {
                     isWin = true;
                     rate = pattiTypeGT.rate;
-                    winDescription = `Win: ${pattiTypeGT.name} ${panna}`;
+                    winDescription = `Win: ${pattiTypeGT.name} ${panna} `;
                 }
             }
 
@@ -255,10 +262,10 @@ class ResultsService {
         const fullSangamGT = findGT(['full sangam', 'sangam', 'full']);
 
         // 2. Define Winning Combinations
-        const winningJodi = `${openSingle}${closeSingle}`;
-        const winningFullSangam = `${openPanna}-${closePanna}`;
-        const winningHalfSangam1 = `${openPanna}-${closeSingle}`;
-        const winningHalfSangam2 = `${openSingle}-${closePanna}`;
+        const winningJodi = `${openSingle}${closeSingle} `;
+        const winningFullSangam = `${openPanna} -${closePanna} `;
+        const winningHalfSangam1 = `${openPanna} -${closeSingle} `;
+        const winningHalfSangam2 = `${openSingle} -${closePanna} `;
 
         // 3. Find Pending Bids
         const targetComplexIds = [jodiGT?.id, halfSangamGT?.id, fullSangamGT?.id].filter(id => id);
@@ -282,19 +289,19 @@ class ResultsService {
                 if (bid.digit === winningJodi) {
                     isWin = true;
                     rate = jodiGT.rate;
-                    winDescription = `Win: Jodi ${bid.digit}`;
+                    winDescription = `Win: Jodi ${bid.digit} `;
                 }
             } else if (fullSangamGT && bid.game_type_id === fullSangamGT.id) {
                 if (bid.digit === winningFullSangam) {
                     isWin = true;
                     rate = fullSangamGT.rate;
-                    winDescription = `Win: Full Sangam ${bid.digit}`;
+                    winDescription = `Win: Full Sangam ${bid.digit} `;
                 }
             } else if (halfSangamGT && bid.game_type_id === halfSangamGT.id) {
                 if (bid.digit === winningHalfSangam1 || bid.digit === winningHalfSangam2) {
                     isWin = true;
                     rate = halfSangamGT.rate;
-                    winDescription = `Win: Half Sangam ${bid.digit}`;
+                    winDescription = `Win: Half Sangam ${bid.digit} `;
                 }
             }
 

@@ -29,8 +29,16 @@ if (process.env.DATABASE_URL) {
 }
 
 module.exports = {
-    development: { ...dbConfig, logging: console.log },
-    test: { ...dbConfig, database: process.env.DB_NAME_TEST || 'database_test' },
+    development: {
+        dialect: 'sqlite',
+        storage: './database.sqlite',
+        logging: false
+    },
+    test: {
+        dialect: 'sqlite',
+        storage: './test-database.sqlite',
+        logging: false
+    },
     production: {
         ...dbConfig,
         logging: false,

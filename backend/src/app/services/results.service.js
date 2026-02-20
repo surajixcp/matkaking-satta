@@ -125,21 +125,26 @@ class ResultsService {
      * Process wins for Single Digit and Patti
      */
     async _processSessionWins(marketId, session, single, panna, transaction) {
+        // Standardize session to First Letter Capitalized (Open/Close) or lowercase depending on DB. 
+        // We will assume DB stores it exactly as passed or as lowercase. To be safe, let's check both or lowercase it.
+        // Actually, we should check lowercase for consistency in DB if `bids.session` stores it as 'open' or 'close'
+        const normalizedSession = session.toLowerCase();
+
         // 1. Fetch Game Types with Flexible Matching
         const gameTypes = await GameType.findAll();
 
         // Helper to find GameType by name (case-insensitive) via keywords or exact match
         const findGT = (keywords) => gameTypes.find(gt => {
-            const name = gt.name.toLowerCase();
+            const name = gt.name.trim().toLowerCase();
             return keywords.some(k => name === k.toLowerCase() || name.includes(k.toLowerCase()));
         });
 
         // Use more robust matching
         // "Single" might be "Single Digit" or just "Single" in DB
-        const singleGT = findGT(['single digit', 'single']) || findGT(['digit']);
-        const singlePattiGT = findGT(['single patti', 'single panna', 'single panel']);
-        const doublePattiGT = findGT(['double patti', 'double panna', 'double panel']);
-        const triplePattiGT = findGT(['triple patti', 'triple panna', 'triple panel']);
+        const singleGT = findGT(['single digit', 'single', 'digit']);
+        const singlePattiGT = findGT(['single patti', 'single panna', 'single panel', 'sp']);
+        const doublePattiGT = findGT(['double patti', 'double panna', 'double panel', 'dp']);
+        const triplePattiGT = findGT(['triple patti', 'triple panna', 'triple panel', 'tp']);
 
         // Log found GameTypes for debugging
         console.log(`[WinProcess] GT IDs: Single=${singleGT?.id}, SP=${singlePattiGT?.id}, DP=${doublePattiGT?.id}, TP=${triplePattiGT?.id}`);
@@ -171,14 +176,14 @@ class ResultsService {
         const bids = await Bid.findAll({
             where: {
                 market_id: marketId,
-                session: session,
+                session: { [Op.iLike]: normalizedSession }, // Case-insensitive session match
                 status: 'pending',
                 game_type_id: { [Op.in]: targetGameTypeIds }
             },
             transaction
         });
 
-        console.log(`[Wins] Found ${bids.length} pending bids for ${session} session.`);
+        console.log(`[Wins] Found ${bids.length} pending bids for ${normalizedSession} session.`);
 
         // 4. Process Bids
         for (const bid of bids) {
@@ -238,17 +243,16 @@ class ResultsService {
         const { openPanna, openSingle, closePanna, closeSingle } = results;
 
         // 1. Fetch Game Types with Flexible Matching
-        // 1. Fetch Game Types with Flexible Matching
         const gameTypes = await GameType.findAll();
 
         const findGT = (keywords) => gameTypes.find(gt => {
-            const name = gt.name.toLowerCase();
+            const name = gt.name.trim().toLowerCase();
             return keywords.some(k => name === k.toLowerCase() || name.includes(k.toLowerCase()));
         });
 
-        const jodiGT = findGT(['jodi digit', 'jodi']) || findGT(['pair']);
-        const halfSangamGT = findGT(['half sangam']);
-        const fullSangamGT = findGT(['full sangam', 'sangam']);
+        const jodiGT = findGT(['jodi digit', 'jodi', 'pair']);
+        const halfSangamGT = findGT(['half sangam', 'half']);
+        const fullSangamGT = findGT(['full sangam', 'sangam', 'full']);
 
         // 2. Define Winning Combinations
         const winningJodi = `${openSingle}${closeSingle}`;

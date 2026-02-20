@@ -199,10 +199,6 @@ export const marketService = {
 };
 
 export const resultService = {
-    declareResult: async (data: any) => {
-        const response = await api.post('/results', data);
-        return response.data.data;
-    },
     getHistory: async () => {
         const response = await api.get('/results');
         return response.data.data;

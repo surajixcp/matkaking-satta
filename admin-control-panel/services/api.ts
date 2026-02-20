@@ -1,7 +1,7 @@
 // API Service - Updated with RBAC and Referral fixes
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://matkakingapi.duckdns.org';
+const API_URL = import.meta.env.VITE_API_URL || 'https://matkakingapi.duckdns.org/api/v1';
 
 const api = axios.create({
     baseURL: API_URL,

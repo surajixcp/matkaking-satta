@@ -128,7 +128,7 @@ class ResultsService {
         // Standardize session to First Letter Capitalized (Open/Close) or lowercase depending on DB. 
         // We will assume DB stores it exactly as passed or as lowercase. To be safe, let's check both or lowercase it.
         // Actually, we should check lowercase for consistency in DB if `bids.session` stores it as 'open' or 'close'
-        const normalizedSession = session.toLowerCase();
+        const normalizedSession = session.toUpperCase();;
 
         // 1. Fetch Game Types with Flexible Matching
         const gameTypes = await GameType.findAll();

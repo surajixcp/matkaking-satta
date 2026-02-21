@@ -179,9 +179,12 @@ class ResultsService {
         const bids = await Bid.findAll({
             where: {
                 market_id: marketId,
-                session: sequelize.where(sequelize.fn('LOWER', sequelize.col('session')), normalizedSession), // Case-insensitive exact match
                 status: 'pending',
-                game_type_id: { [Op.in]: targetGameTypeIds }
+                game_type_id: { [Op.in]: targetGameTypeIds },
+                session: sequelize.where(
+                    sequelize.fn('LOWER', sequelize.cast(sequelize.col('session'), 'text')),
+                    normalizedSession
+                )
             },
             transaction
         });

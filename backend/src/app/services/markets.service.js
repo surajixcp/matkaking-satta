@@ -100,25 +100,42 @@ class MarketsService {
                 const openTotalMinutes = openH * 60 + openM;
                 const closeTotalMinutes = closeH * 60 + closeM;
 
+                // Betting closes 20 minutes prior to result
+                const openBetCloseMinutes = openTotalMinutes - 20;
+                let closeBetCloseMinutes = closeTotalMinutes - 20;
+
                 let openSessionOpen = false;
                 let closeSessionOpen = false;
 
                 if (openTotalMinutes <= closeTotalMinutes) {
                     // Day Market
-                    openSessionOpen = currentTotalMinutes < openTotalMinutes;
-                    closeSessionOpen = currentTotalMinutes < closeTotalMinutes;
+                    openSessionOpen = currentTotalMinutes < openBetCloseMinutes;
+                    closeSessionOpen = currentTotalMinutes < closeBetCloseMinutes;
+                    // Market is open overall until the close session result time
+                    isOpen = currentTotalMinutes < closeTotalMinutes;
                 } else {
                     // Overnight Market
-                    openSessionOpen = currentTotalMinutes > closeTotalMinutes && currentTotalMinutes < openTotalMinutes;
-                    closeSessionOpen = currentTotalMinutes !== closeTotalMinutes;
-                }
+                    // E.g., Open 21:00 (1260), Close 09:00 (540)
+                    if (closeBetCloseMinutes < 0) closeBetCloseMinutes += 1440; // Underflow into previous day, though rare for closing time. Handled generally.
 
-                isOpen = openSessionOpen || closeSessionOpen;
+                    openSessionOpen = currentTotalMinutes > closeTotalMinutes && currentTotalMinutes < openBetCloseMinutes;
+
+                    // Close session is open if we are before its cutoff.
+                    // For overnight, "before close cutoff" could mean after open time up to midnight, OR from midnight up to cutoff.
+                    if (currentTotalMinutes > openTotalMinutes || currentTotalMinutes < closeBetCloseMinutes) {
+                        closeSessionOpen = true;
+                    }
+
+                    // Market is open overall except exactly at the close time duration briefly, or standard overnight logic:
+                    isOpen = currentTotalMinutes > closeTotalMinutes || currentTotalMinutes < closeTotalMinutes;
+                }
             }
 
             return {
                 ...m,
-                isOpen
+                isOpen,
+                openSessionOpen,
+                closeSessionOpen
             };
         });
     }
@@ -184,15 +201,18 @@ class MarketsService {
         const openTotalMinutes = openH * 60 + openM;
         const closeTotalMinutes = closeH * 60 + closeM;
 
+        const openBetCloseMinutes = openTotalMinutes - 20;
+        let closeBetCloseMinutes = closeTotalMinutes - 20;
+
         if (session === 'open') {
             // Betting on Open Panna/Digit
-            // Must be BEFORE Open Time
+            // Must be BEFORE Open Bet Close Time
             if (openTotalMinutes <= closeTotalMinutes) {
                 // Day Market
-                return currentTotalMinutes < openTotalMinutes;
+                return currentTotalMinutes < openBetCloseMinutes;
             } else {
                 // Overnight Market
-                return currentTotalMinutes > closeTotalMinutes && currentTotalMinutes < openTotalMinutes;
+                return currentTotalMinutes > closeTotalMinutes && currentTotalMinutes < openBetCloseMinutes;
             }
         }
 
@@ -200,10 +220,11 @@ class MarketsService {
             // Betting on Close Panna/Digit (session === 'close')
             if (openTotalMinutes <= closeTotalMinutes) {
                 // Day Market
-                return currentTotalMinutes < closeTotalMinutes;
+                return currentTotalMinutes < closeBetCloseMinutes;
             } else {
                 // Overnight Market
-                return currentTotalMinutes !== closeTotalMinutes;
+                if (closeBetCloseMinutes < 0) closeBetCloseMinutes += 1440;
+                return currentTotalMinutes > openTotalMinutes || currentTotalMinutes < closeBetCloseMinutes;
             }
         }
     }

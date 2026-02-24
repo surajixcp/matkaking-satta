@@ -91,8 +91,6 @@ class MarketsService {
         return markets.map(market => {
             const m = market.toJSON();
             let isOpen = false;
-            let openSessionOpen = false;
-            let closeSessionOpen = false;
 
             if (m.status && m.is_open_for_betting) {
                 // Parse DB Time (HH:MM:SS)
@@ -102,32 +100,25 @@ class MarketsService {
                 const openTotalMinutes = openH * 60 + openM;
                 const closeTotalMinutes = closeH * 60 + closeM;
 
-                // Betting closes 20 minutes before the result time.
-                const openBettingCloseMinutes = openTotalMinutes - 20;
-                const closeBettingCloseMinutes = closeTotalMinutes - 20;
+                let openSessionOpen = false;
+                let closeSessionOpen = false;
 
                 if (openTotalMinutes <= closeTotalMinutes) {
                     // Day Market
-                    // Market is open for betting if the current time is before the final close session declaration time
-                    isOpen = currentTotalMinutes < closeTotalMinutes;
-
-                    openSessionOpen = currentTotalMinutes < openBettingCloseMinutes;
-                    closeSessionOpen = currentTotalMinutes < closeBettingCloseMinutes;
+                    openSessionOpen = currentTotalMinutes < openTotalMinutes;
+                    closeSessionOpen = currentTotalMinutes < closeTotalMinutes;
                 } else {
                     // Overnight Market
-                    // E.g., open 23:00, close 01:00
-                    isOpen = currentTotalMinutes !== closeTotalMinutes;
-
-                    openSessionOpen = currentTotalMinutes < openBettingCloseMinutes || currentTotalMinutes > closeTotalMinutes;
-                    closeSessionOpen = currentTotalMinutes < closeBettingCloseMinutes || currentTotalMinutes > closeTotalMinutes;
+                    openSessionOpen = currentTotalMinutes > closeTotalMinutes && currentTotalMinutes < openTotalMinutes;
+                    closeSessionOpen = currentTotalMinutes !== closeTotalMinutes;
                 }
+
+                isOpen = openSessionOpen || closeSessionOpen;
             }
 
             return {
                 ...m,
-                isOpen,
-                openSessionOpen,
-                closeSessionOpen
+                isOpen
             };
         });
     }
@@ -193,19 +184,15 @@ class MarketsService {
         const openTotalMinutes = openH * 60 + openM;
         const closeTotalMinutes = closeH * 60 + closeM;
 
-        // Betting closes 20 mins before
-        const openBettingCloseMinutes = openTotalMinutes - 20;
-        const closeBettingCloseMinutes = closeTotalMinutes - 20;
-
         if (session === 'open') {
             // Betting on Open Panna/Digit
-            // Must be BEFORE Open Betting Close Time
+            // Must be BEFORE Open Time
             if (openTotalMinutes <= closeTotalMinutes) {
                 // Day Market
-                return currentTotalMinutes < openBettingCloseMinutes;
+                return currentTotalMinutes < openTotalMinutes;
             } else {
                 // Overnight Market
-                return currentTotalMinutes > closeTotalMinutes && currentTotalMinutes < openBettingCloseMinutes;
+                return currentTotalMinutes > closeTotalMinutes && currentTotalMinutes < openTotalMinutes;
             }
         }
 
@@ -213,10 +200,10 @@ class MarketsService {
             // Betting on Close Panna/Digit (session === 'close')
             if (openTotalMinutes <= closeTotalMinutes) {
                 // Day Market
-                return currentTotalMinutes < closeBettingCloseMinutes;
+                return currentTotalMinutes < closeTotalMinutes;
             } else {
                 // Overnight Market
-                return currentTotalMinutes !== closeBettingCloseMinutes;
+                return currentTotalMinutes !== closeTotalMinutes;
             }
         }
     }

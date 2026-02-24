@@ -82,6 +82,8 @@ class MarketsService {
             ]
         });
 
+        // Use standard new Date() logic because timestamps in DB are already aligned correctly
+        // We calculate current total minutes in IST to compare with the open/close times
         const currentIST = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
         const dateObj = new Date(currentIST);
         const currentHours = dateObj.getHours();
@@ -91,6 +93,8 @@ class MarketsService {
         return markets.map(market => {
             const m = market.toJSON();
             let isOpen = false;
+            let openSessionOpen = false;
+            let closeSessionOpen = false;
 
             if (m.status && m.is_open_for_betting) {
                 // Parse DB Time (HH:MM:SS)
@@ -103,9 +107,6 @@ class MarketsService {
                 // Betting closes 20 minutes prior to result
                 const openBetCloseMinutes = openTotalMinutes - 20;
                 let closeBetCloseMinutes = closeTotalMinutes - 20;
-
-                let openSessionOpen = false;
-                let closeSessionOpen = false;
 
                 if (openTotalMinutes <= closeTotalMinutes) {
                     // Day Market
@@ -128,6 +129,19 @@ class MarketsService {
 
                     // Market is open overall except exactly at the close time duration briefly, or standard overnight logic:
                     isOpen = currentTotalMinutes > closeTotalMinutes || currentTotalMinutes < closeTotalMinutes;
+                }
+            }
+
+            // Result Masking:
+            // Do not reveal results (which might have been fetched early by scrapers)
+            // if the respective betting session is STILL actively accepting bets today.
+            if (m.results && m.results.length > 0) {
+                const todayResult = m.results[0];
+                if (openSessionOpen) {
+                    todayResult.open_declare = null;
+                }
+                if (closeSessionOpen) {
+                    todayResult.close_declare = null;
                 }
             }
 

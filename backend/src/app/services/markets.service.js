@@ -67,8 +67,12 @@ class MarketsService {
      */
     async getMarkets() {
         // Basic implementation: fetch all
-        // In production: cache this
-        const today = new Date().toISOString().split('T')[0];
+        // Get current date string (YYYY-MM-DD) in IST
+        const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+        const year = nowIST.getFullYear();
+        const month = String(nowIST.getMonth() + 1).padStart(2, '0');
+        const day = String(nowIST.getDate()).padStart(2, '0');
+        const today = `${year}-${month}-${day}`;
 
         const markets = await Market.findAll({
             order: [['open_time', 'ASC']],

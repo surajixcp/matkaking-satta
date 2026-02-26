@@ -125,6 +125,30 @@ const startResultFetcher = () => {
                             if (parsed) {
                                 const today = new Date().toISOString().split('T')[0];
 
+                                // Helper to check if current IST time is past a given market time string (e.g. "03:15 PM")
+                                const isTimePast = (timeStr) => {
+                                    if (!timeStr) return true; // fallback
+                                    
+                                    const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+                                    const currentMinutes = nowIST.getHours() * 60 + nowIST.getMinutes();
+                                    
+                                    // Parse timeStr like "03:15 PM" to minutes
+                                    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                                    if (!match) return true;
+                                    
+                                    let hours = parseInt(match[1]);
+                                    const mins = parseInt(match[2]);
+                                    const period = match[3].toUpperCase();
+                                    
+                                    if (period === 'PM' && hours < 12) hours += 12;
+                                    if (period === 'AM' && hours === 12) hours = 0;
+                                    
+                                    const targetMinutes = hours * 60 + mins;
+                                    
+                                    // Give a 5 minute buffer before accepting a result (e.g. if close is 5:00, accept at 4:55 just in case)
+                                    return currentMinutes >= (targetMinutes - 5);
+                                };
+
                                 // Check if result exists for today
                                 let currentResult = await Result.findOne({
                                     where: { market_id: market.id, date: today }
@@ -134,23 +158,28 @@ const startResultFetcher = () => {
                                 if (parsed.openPanna && parsed.openDigit) {
                                     // If result doesn't exist OR open is not declared
                                     if (!currentResult || !currentResult.open_declare) {
-                                        console.log(`[Auto-Declare] Found OPEN for ${market.name}: ${parsed.openPanna}-${parsed.openDigit}`);
-                                        try {
-                                            await resultsService.declareResult({
-                                                marketId: market.id,
-                                                session: 'Open',
-                                                panna: parsed.openPanna,
-                                                single: parsed.openDigit,
-                                                declaredBy: 'system'
-                                            });
-                                            declaredCount++;
-                                            console.log(`[Auto-Declare] ✅ OPEN Validated & Declared for ${market.name}`);
-                                        } catch (e) {
-                                            if (e.message.includes("already declared")) {
-                                                // Ignore
-                                            } else {
-                                                console.error(`[Auto-Declare] ❌ Failed OPEN for ${market.name}:`, e.message);
+                                        // CRITICAL CHECK: Make sure current time is actually past the Open Time!
+                                        // Otherwise, it's just yesterday's result lingering on DPBoss.
+                                        if (isTimePast(market.open_time)) {
+                                            console.log(`[Auto-Declare] Found OPEN for ${market.name}: ${parsed.openPanna}-${parsed.openDigit}`);
+                                            try {
+                                                await resultsService.declareResult({
+                                                    marketId: market.id,
+                                                    session: 'Open',
+                                                    panna: parsed.openPanna,
+                                                    single: parsed.openDigit,
+                                                    declaredBy: 'system'
+                                                });
+                                                declaredCount++;
+                                                console.log(`[Auto-Declare] ✅ OPEN Validated & Declared for ${market.name}`);
+                                            } catch (e) {
+                                                if (!e.message.includes("already declared")) {
+                                                    console.error(`[Auto-Declare] ❌ Failed OPEN for ${market.name}:`, e.message);
+                                                }
                                             }
+                                        } else {
+                                            // Debug log
+                                            // console.log(`[Auto-Declare] 🕒 Ignored OPEN for ${market.name}. Current time is before open_time (${market.open_time}).`);
                                         }
                                     }
                                 }
@@ -163,22 +192,23 @@ const startResultFetcher = () => {
                                     });
 
                                     if (currentResult && currentResult.open_declare && !currentResult.close_declare) {
-                                        console.log(`[Auto-Declare] Found CLOSE for ${market.name}: ${parsed.closePanna}-${parsed.closeDigit}`);
-                                        try {
-                                            await resultsService.declareResult({
-                                                marketId: market.id,
-                                                session: 'Close',
-                                                panna: parsed.closePanna,
-                                                single: parsed.closeDigit,
-                                                declaredBy: 'system'
-                                            });
-                                            declaredCount++;
-                                            console.log(`[Auto-Declare] ✅ CLOSE Validated & Declared for ${market.name}`);
-                                        } catch (e) {
-                                            if (e.message.includes("already declared")) {
-                                                // Ignore
-                                            } else {
-                                                console.error(`[Auto-Declare] ❌ Failed CLOSE for ${market.name}:`, e.message);
+                                        // CRITICAL CHECK: Ensure time is past Close Time!
+                                        if (isTimePast(market.close_time)) {
+                                            console.log(`[Auto-Declare] Found CLOSE for ${market.name}: ${parsed.closePanna}-${parsed.closeDigit}`);
+                                            try {
+                                                await resultsService.declareResult({
+                                                    marketId: market.id,
+                                                    session: 'Close',
+                                                    panna: parsed.closePanna,
+                                                    single: parsed.closeDigit,
+                                                    declaredBy: 'system'
+                                                });
+                                                declaredCount++;
+                                                console.log(`[Auto-Declare] ✅ CLOSE Validated & Declared for ${market.name}`);
+                                            } catch (e) {
+                                                if (!e.message.includes("already declared")) {
+                                                    console.error(`[Auto-Declare] ❌ Failed CLOSE for ${market.name}:`, e.message);
+                                                }
                                             }
                                         }
                                     }

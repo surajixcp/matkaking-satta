@@ -102,16 +102,34 @@ const startResultFetcher = () => {
 
                         if (!normalizedGameName) continue;
 
-                        // Improved Matching: 
+                        // Improved Matching:
                         // 1. Exact Match
-                        // 2. Contains Match (Scraped contains DB name OR DB name contains Scraped)
                         let market = mappedMarkets.find(m => m.normalizedName === normalizedGameName);
 
                         if (!market) {
-                            market = mappedMarkets.find(m =>
-                                normalizedGameName.includes(m.normalizedName) ||
-                                m.normalizedName.includes(normalizedGameName)
-                            );
+                            // 2. Exact match no spaces
+                            const noSpaceScraped = normalizedGameName.replace(/\s+/g, '');
+                            market = mappedMarkets.find(m => m.normalizedName.replace(/\s+/g, '') === noSpaceScraped);
+                        }
+
+                        if (!market) {
+                            // 3. Contains match with guard against major prefixes/suffixes like SUPER, NIGHT, DAY
+                            market = mappedMarkets.find(m => {
+                                const sWords = normalizedGameName.split(/\s+/);
+                                const mWords = m.normalizedName.split(/\s+/);
+
+                                // Prevent false positives like SUPER KALYAN matching KALYAN
+                                const modifiers = ['SUPER', 'NIGHT', 'DAY', 'MAIN', 'STAR', 'MORNING', 'EVENING'];
+                                const hasContradiction = modifiers.some(word =>
+                                    (sWords.includes(word) && !mWords.includes(word)) ||
+                                    (mWords.includes(word) && !sWords.includes(word))
+                                );
+
+                                if (hasContradiction) return false;
+
+                                return normalizedGameName.includes(m.normalizedName) ||
+                                    m.normalizedName.includes(normalizedGameName);
+                            });
                         }
 
                         if (market) {
@@ -134,23 +152,23 @@ const startResultFetcher = () => {
                                 // Helper to check if current IST time is past a given market time string (e.g. "03:15 PM")
                                 const isTimePast = (timeStr) => {
                                     if (!timeStr) return true; // fallback
-                                    
+
                                     const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
                                     const currentMinutes = nowIST.getHours() * 60 + nowIST.getMinutes();
-                                    
+
                                     // Parse timeStr like "03:15 PM" to minutes
                                     const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
                                     if (!match) return true;
-                                    
+
                                     let hours = parseInt(match[1]);
                                     const mins = parseInt(match[2]);
                                     const period = match[3].toUpperCase();
-                                    
+
                                     if (period === 'PM' && hours < 12) hours += 12;
                                     if (period === 'AM' && hours === 12) hours = 0;
-                                    
+
                                     const targetMinutes = hours * 60 + mins;
-                                    
+
                                     // Give a 5 minute buffer before accepting a result (e.g. if close is 5:00, accept at 4:55 just in case)
                                     return currentMinutes >= (targetMinutes - 5);
                                 };

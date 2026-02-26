@@ -39,6 +39,12 @@ function parseResult(numberString) {
             // Sometimes it might just be "1" if close isn't there, but usually it's "**" or "1*"
             openDigit = jodi[0];
         }
+    } else if (parts.length === 4) {
+        // "560-1-*-**" (dpboss.family custom format)
+        if (parts[0] !== '***') openPanna = parts[0];
+        if (parts[1] !== '*') openDigit = parts[1];
+        if (parts[2] !== '*') closeDigit = parts[2];
+        if (parts[3] !== '***' && parts[3] !== '**') closePanna = parts[3];
     } else if (parts.length === 2) {
         // "290-1" (Open Declared)
         if (parts[0].length === 3 && parts[0] !== '***') {

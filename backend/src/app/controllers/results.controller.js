@@ -9,6 +9,8 @@ exports.getHistory = async (req, res, next) => {
     } catch (error) {
         next(error);
     }
+};
+
 exports.deleteTodayResults = async (req, res, next) => {
     try {
         const response = await resultsService.deleteTodayResults();

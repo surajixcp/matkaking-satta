@@ -22,6 +22,23 @@ async function fetchDPBossResults() {
 
             const $ = cheerio.load(html);
             const results = [];
+            let scrapedDateStr = null;
+
+            // Extract Date String
+            // We look for text like "Date :- 26-02-2026" or "DATE:↬ : 26/02/2026"
+            $("*").each((i, el) => {
+                const text = $(el).text();
+                // Find a string containing the current year and "date" that's relatively short
+                const currentYear = new Date().getFullYear().toString();
+                if (text && text.toLowerCase().includes("date") && text.includes(currentYear) && text.length < 50) {
+                    // Extract DD-MM-YYYY or DD/MM/YYYY using regex
+                    const match = text.match(/(\\d{2})[-/](\\d{2})[-/](\\d{4})/);
+                    if (match) {
+                        // Format as YYYY-MM-DD
+                        scrapedDateStr = `${match[3]}-${match[2]}-${match[1]}`;
+                    }
+                }
+            });
 
             // Strategy: Look for .tkt-val div containers
             $(".tkt-val > div").each((i, elem) => {
@@ -38,8 +55,8 @@ async function fetchDPBossResults() {
             });
 
             if (results.length > 0) {
-                console.log(`[Scraper] Successfully found ${results.length} results from ${url}.`);
-                return results; // Return on first successful scrape
+                console.log(`[Scraper] Successfully found ${results.length} results from ${url}. Scraped Date: ${scrapedDateStr || 'Unknown'}`);
+                return { date: scrapedDateStr, results }; // Return date + results
             } else {
                 console.log(`[Scraper] No results found on ${url}, trying next source...`);
             }
@@ -50,7 +67,7 @@ async function fetchDPBossResults() {
     }
 
     console.error("[Scraper] All sources failed fetching results.");
-    return [];
+    return { date: null, results: [] };
 }
 
 module.exports = {

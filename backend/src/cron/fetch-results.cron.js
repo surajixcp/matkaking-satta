@@ -59,9 +59,24 @@ const startResultFetcher = () => {
         console.log(`[Cron] ${new Date().toISOString()} - Starting Result Fetch...`);
 
         try {
-            const results = await fetchDPBossResults();
+            const data = await fetchDPBossResults();
+            const results = data.results || [];
+            const scrapedDate = data.date;
 
             if (results && results.length > 0) {
+                // Determine today's date in IST (YYYY-MM-DD)
+                const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+                const todayIST = `${nowIST.getFullYear()}-${String(nowIST.getMonth() + 1).padStart(2, '0')}-${String(nowIST.getDate()).padStart(2, '0')}`;
+
+                if (scrapedDate && scrapedDate !== todayIST) {
+                    console.log(`[Cron] ⚠️ Scraped date (${scrapedDate}) does NOT match today's date in IST (${todayIST}). Skipping auto-declare to prevent old results.`);
+                    return; // Abort processing for this minute
+                } else if (!scrapedDate) {
+                    console.log(`[Cron] ⚠️ Could not verify scraped date. Proceeding with caution...`);
+                } else {
+                    console.log(`[Cron] ✅ Scraped date verified: ${scrapedDate}`);
+                }
+
                 let savedCount = 0;
                 let declaredCount = 0;
 

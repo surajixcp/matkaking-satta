@@ -202,8 +202,12 @@ export const resultService = {
     getHistory: async () => {
         const response = await api.get('/results');
         return response.data.data;
+    },
+    deleteToday: async () => {
+        const response = await api.delete('/results/today/clear');
+        return response.data;
     }
-}
+};
 
 export const walletService = {
     getWithdrawals: async (status: string = 'all') => {

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { RefreshCw, Globe, Clock, Copy, AlignLeft } from 'lucide-react';
-import { scraperService } from '../services/api';
+import { RefreshCw, Globe, Trash2 } from 'lucide-react';
+import { scraperService, resultService } from '../services/api';
 
 const ScrapedResultsTable: React.FC = () => {
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-    const [selectedGame, setSelectedGame] = useState<string | null>(null);
+    const [clearing, setClearing] = useState(false);
 
     const loadData = async () => {
         setLoading(true);
@@ -19,16 +19,24 @@ const ScrapedResultsTable: React.FC = () => {
         }
     };
 
+    const handleClearToday = async () => {
+        if (!window.confirm("Are you sure you want to clear ALL of today's fetched results? Do this ONLY if the results are showing yesterday's numbers!")) return;
+        setClearing(true);
+        try {
+            const res = await resultService.deleteToday();
+            alert(res.message || "Results cleared successfully");
+        } catch (error: any) {
+            alert(error?.response?.data?.error || "Failed to clear results");
+        } finally {
+            setClearing(false);
+        }
+    };
+
     useEffect(() => {
         loadData();
         const interval = setInterval(loadData, 30000); // Auto-refresh every 30s
         return () => clearInterval(interval);
     }, []);
-
-    // Filter to show distinct latest result per game? Or just raw log?
-    // User asked for "Real fetch result", likely raw log or latest status.
-    // Let's show raw log for now, maybe filtered by unique game if list is too long.
-    // Actually, raw log is better to see "when" it was fetched.
 
     return (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-full flex flex-col">
@@ -40,13 +48,23 @@ const ScrapedResultsTable: React.FC = () => {
                         <p className="text-[10px] text-slate-500 font-medium">Real-time data from DPBoss</p>
                     </div>
                 </div>
-                <button
-                    onClick={loadData}
-                    disabled={loading}
-                    className={`p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all ${loading ? 'animate-spin' : ''}`}
-                >
-                    <RefreshCw size={16} />
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleClearToday}
+                        disabled={clearing}
+                        title="Clear Today's Results (If Stale)"
+                        className={`p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all ${clearing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                    <button
+                        onClick={loadData}
+                        disabled={loading}
+                        className={`p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all ${loading ? 'animate-spin' : ''}`}
+                    >
+                        <RefreshCw size={16} />
+                    </button>
+                </div>
             </div>
 
             <div className="overflow-y-auto flex-1 custom-scrollbar">

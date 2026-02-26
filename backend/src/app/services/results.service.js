@@ -3,6 +3,25 @@ const { Op } = require('sequelize');
 
 class ResultsService {
     /**
+     * Clear all results for today. Useful if wrong results were auto-scraped.
+     */
+    async deleteTodayResults() {
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Let's use IST date just like the scraper
+        const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+        const todayIST = `${nowIST.getFullYear()}-${String(nowIST.getMonth() + 1).padStart(2, '0')}-${String(nowIST.getDate()).padStart(2, '0')}`;
+        
+        console.log(`[Admin] Initiated clearing results for date: ${todayIST}`);
+        
+        const deletedCount = await Result.destroy({
+            where: { date: todayIST }
+        });
+        
+        return { success: true, message: `Deleted ${deletedCount} incorrect results for today (${todayIST}).` };
+    }
+
+    /**
      * Declare a result for a market session
      * @param {Object} data { marketId, session, panna, single, declaredBy }
      */

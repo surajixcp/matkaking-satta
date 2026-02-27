@@ -142,10 +142,12 @@ class MarketsService {
             if (m.results && m.results.length > 0) {
                 const todayResult = m.results[0];
                 if (openSessionOpen) {
-                    todayResult.open_declare = null;
+                    if (todayResult.setDataValue) todayResult.setDataValue('open_declare', null);
+                    else todayResult.open_declare = null;
                 }
                 if (closeSessionOpen) {
-                    todayResult.close_declare = null;
+                    if (todayResult.setDataValue) todayResult.setDataValue('close_declare', null);
+                    else todayResult.close_declare = null;
                 }
             }
 

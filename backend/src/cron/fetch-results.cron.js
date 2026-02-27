@@ -66,6 +66,25 @@ function parseResult(numberString) {
         }
     }
 
+    // Strict validation: Pannas must be exactly 3 digits (if present)
+    if (openPanna && (!/^\d{3}$/.test(openPanna))) openPanna = null;
+    if (closePanna && (!/^\d{3}$/.test(closePanna))) closePanna = null;
+
+    // Strict validation: Digits must be exactly 1 digit (if present)
+    if (openDigit && (!/^\d$/.test(openDigit))) openDigit = null;
+    if (closeDigit && (!/^\d$/.test(closeDigit))) closeDigit = null;
+
+    // If we only have an open digit but no open panna, or vice versa, it's an invalid stray read
+    if ((openPanna && !openDigit) || (!openPanna && openDigit)) {
+        openPanna = null;
+        openDigit = null;
+    }
+
+    // Temporary hardcoded fix for DPBoss glitch sending "588-1" repeatedly for KALYAN
+    if (cleanedString === '588-1') {
+        return null;
+    }
+
     return { openPanna, openDigit, closePanna, closeDigit };
 }
 
@@ -223,6 +242,17 @@ const startResultFetcher = () => {
                                 let currentResult = await Result.findOne({
                                     where: { market_id: market.id, date: today }
                                 });
+
+                                // 2. Detect if an incoming string is "Open Only" (e.g. 588-1) but it's already well past CLOSE time.
+                                // If the market is completely done for the day (e.g. night time for a day market), DPBoss shouldn't just be saying "588-1". 
+                                // It should be a full string "588-1X-XXX". If it's partial and it's super late, it's likely a scraped glitch or yesterday's remnant.
+                                const isAfterCloseBuffer = isSessionPast(market, 'close') && currentResult?.open_declare;
+                                const isPartialString = !hasValidCloseDigit && !parsed.closePanna;
+
+                                if (isPartialString && isAfterCloseBuffer) {
+                                    // Skip, it's a broken partial result that came in late
+                                    continue;
+                                }
 
                                 // Declare OPEN
                                 if (parsed.openPanna && parsed.openDigit) {

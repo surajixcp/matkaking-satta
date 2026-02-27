@@ -256,6 +256,7 @@ export const bidsService = {
             amount: parseFloat(b.amount),
             multiplier: parseFloat(b.game_type?.rate || '1'),
             session: b.session,
+            status: b.status || 'pending',
             timestamp: new Date(b.createdAt).toLocaleTimeString(),
             date: new Date(b.createdAt).toLocaleDateString()
         }));

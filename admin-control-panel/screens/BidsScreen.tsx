@@ -60,9 +60,11 @@ const BidDetailModal: React.FC<{ bid: Bid | null; onClose: () => void }> = ({ bi
               <p className="text-xs text-slate-500 font-medium">{bid.date}</p>
             </div>
           </div>
-          <div className="bg-slate-50 p-4 rounded-xl flex gap-3 items-start border border-slate-100">
-            <AlertCircle size={18} className="text-indigo-600 shrink-0" />
-            <p className="text-xs leading-relaxed text-slate-500 font-medium">This bid is active. Payout is automatically credited to the user's wallet if the declared result matches the played number.</p>
+          <div className={`p-4 rounded-xl flex gap-3 items-start border ${bid.status === 'won' ? 'border-emerald-200 bg-emerald-50' : bid.status === 'lost' ? 'border-rose-200 bg-rose-50' : 'bg-amber-50 border-amber-200'}`}>
+            <AlertCircle size={18} className={`${bid.status === 'won' ? 'text-emerald-600' : bid.status === 'lost' ? 'text-rose-600' : 'text-amber-600'} shrink-0`} />
+            <p className={`text-xs leading-relaxed font-bold ${bid.status === 'won' ? 'text-emerald-700' : bid.status === 'lost' ? 'text-rose-700' : 'text-amber-700'}`}>
+              {bid.status === 'won' ? `This bid has WON. The user has been credited ₹${(bid.amount * bid.multiplier).toLocaleString()}.` : bid.status === 'lost' ? 'This bid has LOST. Better luck next time.' : "This bid is pending. Payout is automatically credited to the user's wallet if the declared result matches the played number."}
+            </p>
           </div>
         </div>
         <div className="p-5 bg-slate-50 border-t border-slate-100 flex justify-end">
@@ -155,6 +157,7 @@ const BidsScreen: React.FC<BidsScreenProps> = () => {
                 <th className="px-6 py-3">Digits</th>
                 <th className="px-6 py-3 text-right">Amnt</th>
                 <th className="px-6 py-3 text-right">Pot. Win</th>
+                <th className="px-6 py-3 text-center">Status</th>
                 <th className="px-6 py-3 text-right">Opts</th>
               </tr>
             </thead>
@@ -177,6 +180,14 @@ const BidsScreen: React.FC<BidsScreenProps> = () => {
                     <td className="px-6 py-3.5 font-mono font-bold text-slate-900 tracking-tight">{bid.digits}</td>
                     <td className="px-6 py-3.5 text-right font-medium text-slate-600">₹{bid.amount.toLocaleString()}</td>
                     <td className="px-6 py-3.5 text-right font-bold text-emerald-600">₹{(bid.amount * bid.multiplier).toLocaleString()}</td>
+                    <td className="px-6 py-3.5 text-center">
+                      <span className={`inline-flex items-center justify-center min-w-[70px] px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${bid.status === 'won' ? 'bg-emerald-100 text-emerald-700' :
+                          bid.status === 'lost' ? 'bg-rose-100 text-rose-700' :
+                            'bg-amber-100 text-amber-700'
+                        }`}>
+                        {bid.status}
+                      </span>
+                    </td>
                     <td className="px-6 py-3.5 text-right">
                       <div className="flex items-center justify-end space-x-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button onClick={() => setSelectedBid(bid)} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="View Details"><Eye size={16} /></button>

@@ -114,4 +114,5 @@ export interface Bid {
   multiplier: number;
   timestamp: string;
   date: string;
+  status: 'won' | 'lost' | 'pending';
 }

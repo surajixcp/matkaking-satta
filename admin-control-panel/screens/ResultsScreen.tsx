@@ -23,7 +23,18 @@ const ResultsScreen: React.FC = () => {
     }
   };
 
-
+  const handleDelete = async (id: string) => {
+    if (confirm("Are you sure you want to permanently delete this result? This cannot be undone.")) {
+      try {
+        await resultService.deleteResult(id);
+        alert('Result deleted successfully');
+        loadHistory();
+      } catch (error: any) {
+        console.error('Failed to delete result:', error);
+        alert('Failed to delete result: ' + (error.response?.data?.message || error.message));
+      }
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-300 h-[calc(100vh-100px)]">
@@ -52,6 +63,7 @@ const ResultsScreen: React.FC = () => {
                   <th className="px-6 py-3">Market Details</th>
                   <th className="px-6 py-3">Result</th>
                   <th className="px-6 py-3">Date</th>
+                  <th className="px-6 py-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 text-sm">
@@ -76,6 +88,15 @@ const ResultsScreen: React.FC = () => {
                     </td>
                     <td className="px-6 py-3.5">
                       <p className="text-xs font-medium text-slate-400">{item.date}</p>
+                    </td>
+                    <td className="px-6 py-3.5 text-right">
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                        title="Delete Result"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </td>
                   </tr>
                 ))}

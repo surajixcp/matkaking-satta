@@ -206,6 +206,10 @@ export const resultService = {
     deleteToday: async () => {
         const response = await api.delete('/results/today/clear');
         return response.data;
+    },
+    deleteResult: async (id: string) => {
+        const response = await api.delete(`/results/${id}`);
+        return response.data;
     }
 };
 

@@ -20,6 +20,16 @@ exports.deleteTodayResults = async (req, res, next) => {
     }
 };
 
+exports.deleteResult = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const response = await resultsService.deleteResult(id);
+        res.json(response);
+    } catch (error) {
+        next(error);
+    }
+};
+
 exports.reprocessResults = async (req, res, next) => {
     try {
         const { marketId, date } = req.body;

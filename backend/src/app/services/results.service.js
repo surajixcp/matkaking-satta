@@ -7,17 +7,17 @@ class ResultsService {
      */
     async deleteTodayResults() {
         const today = new Date().toISOString().split('T')[0];
-        
+
         // Let's use IST date just like the scraper
         const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
         const todayIST = `${nowIST.getFullYear()}-${String(nowIST.getMonth() + 1).padStart(2, '0')}-${String(nowIST.getDate()).padStart(2, '0')}`;
-        
+
         console.log(`[Admin] Initiated clearing results for date: ${todayIST}`);
-        
+
         const deletedCount = await Result.destroy({
             where: { date: todayIST }
         });
-        
+
         return { success: true, message: `Deleted ${deletedCount} incorrect results for today (${todayIST}).` };
     }
 
@@ -137,6 +137,29 @@ class ResultsService {
             await transaction.rollback();
             console.error(`[Reprocess] Error: ${error.message}`);
             throw error;
+        }
+    }
+
+    /**
+     * Delete a specific result by ID (Admin)
+     */
+    async deleteResult(resultId) {
+        try {
+            const result = await Result.findByPk(resultId);
+            if (!result) {
+                return { success: false, message: 'Result not found' };
+            }
+
+            console.log(`[ResultService] Deleting result ID: ${resultId}`);
+            await result.destroy();
+
+            return {
+                success: true,
+                message: `Result ID ${resultId} deleted successfully.`
+            };
+        } catch (error) {
+            console.error('[ResultService] Error deleting result:', error);
+            return { success: false, message: 'Failed to delete result: ' + error.message };
         }
     }
 

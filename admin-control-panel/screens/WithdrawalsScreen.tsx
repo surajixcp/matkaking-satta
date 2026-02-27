@@ -219,7 +219,19 @@ const WithdrawalsScreen: React.FC<WithdrawalsScreenProps> = () => {
               {filteredWithdrawals.length > 0 ? (
                 filteredWithdrawals.map((req) => (
                   <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-3 sm:px-6 py-2 sm:py-4"><div className="flex items-center space-x-2"><div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg bg-slate-100 flex items-center justify-center font-black text-slate-400 text-[9px]">{req.userName.charAt(0)}</div><div><p className="text-[10px] sm:text-sm font-bold text-slate-800">{req.userName}</p><p className="text-[7px] text-slate-400 font-bold uppercase tracking-tighter">#{req.id}</p></div></div></td>
+                    <td className="px-3 sm:px-6 py-2 sm:py-4">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg bg-slate-100 flex items-center justify-center font-black text-slate-400 text-[9px]">
+                          {req.userName.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-[10px] sm:text-sm font-bold text-slate-800">{req.userName}</p>
+                          <p className="text-[8px] text-slate-500 font-bold tracking-tight">
+                            {req.method === 'UPI' ? req.details?.upiId : req.details?.accountNo ? `A/C: ${req.details.accountNo}` : `A/C: ${req.details?.bankName || 'N/A'}`}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
                     <td className="px-3 sm:px-6 py-2 sm:py-4"><span className={`text-[7px] sm:text-[10px] font-black px-1.5 py-0.5 rounded ${req.method === 'UPI' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-900 text-white'}`}>{req.method}</span></td>
                     <td className="px-3 sm:px-6 py-2 sm:py-4 text-right font-black text-slate-900 text-[10px] sm:text-base">₹{req.amount.toLocaleString()}</td>
                     <td className="px-3 sm:px-6 py-2 sm:py-4 text-right">

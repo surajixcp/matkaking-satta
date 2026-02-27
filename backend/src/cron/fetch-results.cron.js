@@ -67,20 +67,26 @@ const startResultFetcher = () => {
         try {
             const data = await fetchDPBossResults();
             const results = data.results || [];
-            const scrapedDate = data.date;
+            const { scrapedStartDate, scrapedEndDate, dateStr: scrapedDateStr } = data;
 
             if (results && results.length > 0) {
                 // Determine today's date in IST (YYYY-MM-DD)
                 const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
                 const todayIST = `${nowIST.getFullYear()}-${String(nowIST.getMonth() + 1).padStart(2, '0')}-${String(nowIST.getDate()).padStart(2, '0')}`;
 
-                if (scrapedDate && scrapedDate !== todayIST) {
-                    console.log(`[Cron] ⚠️ Scraped date (${scrapedDate}) does NOT match today's date in IST (${todayIST}). Skipping auto-declare to prevent old results.`);
-                    return; // Abort processing for this minute
-                } else if (!scrapedDate) {
-                    console.log(`[Cron] ⚠️ Could not verify scraped date. Proceeding with caution...`);
+                if (scrapedStartDate && scrapedEndDate) {
+                    const todayDate = new Date(todayIST);
+                    const startDate = new Date(scrapedStartDate);
+                    const endDate = new Date(scrapedEndDate);
+
+                    if (todayDate >= startDate && todayDate <= endDate) {
+                        console.log(`[Cron] ✅ Today (${todayIST}) falls within scraped week range: ${scrapedDateStr}`);
+                    } else {
+                        console.log(`[Cron] ⚠️ Today (${todayIST}) is OUTSIDE scraped week range (${scrapedDateStr}). Skipping auto-declare.`);
+                        return; // Abort
+                    }
                 } else {
-                    console.log(`[Cron] ✅ Scraped date verified: ${scrapedDate}`);
+                    console.log(`[Cron] ⚠️ Could not verify scraped date range. Proceeding with caution...`);
                 }
 
                 let savedCount = 0;

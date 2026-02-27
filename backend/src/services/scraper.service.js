@@ -25,20 +25,22 @@ async function fetchDPBossResults() {
             let scrapedDateStr = null;
 
             // Extract Date String
-            // We look for text like "Date :- 26-02-2026" or "DATE:↬ : 26/02/2026"
-            $("*").each((i, el) => {
-                const text = $(el).text();
-                // Find a string containing the current year and "date" that's relatively short
-                const currentYear = new Date().getFullYear().toString();
-                if (text && text.toLowerCase().includes("date") && text.includes(currentYear) && text.length < 50) {
-                    // Extract DD-MM-YYYY or DD/MM/YYYY using regex
-                    const match = text.match(/(\d{2})[-/](\d{2})[-/](\d{4})/);
-                    if (match) {
-                        // Format as YYYY-MM-DD
-                        scrapedDateStr = `${match[3]}-${match[2]}-${match[1]}`;
-                    }
-                }
-            });
+            // We look for text like "23-02-2026 To 01-03-2026"
+            let scrapedStartDate = null;
+            let scrapedEndDate = null;
+
+            // Regex to find the start and end dates from the raw HTML
+            const match = html.match(/(\d{2}[-/]\d{2}[-/]\d{4})[\s\S]{1,50}to[\s\S]{1,50}(\d{2}[-/]\d{2}[-/]\d{4})/i);
+
+            if (match) {
+                // Parse DD-MM-YYYY to YYYY-MM-DD
+                const startParts = match[1].split(/[-/]/);
+                const endParts = match[2].split(/[-/]/);
+
+                scrapedStartDate = `${startParts[2]}-${startParts[1]}-${startParts[0]}`;
+                scrapedEndDate = `${endParts[2]}-${endParts[1]}-${endParts[0]}`;
+                scrapedDateStr = `${scrapedStartDate} to ${scrapedEndDate}`;
+            }
 
             // Strategy 1: Look for .tkt-val div containers (Standard dpboss format)
             $(".tkt-val > div").each((i, elem) => {
@@ -74,8 +76,13 @@ async function fetchDPBossResults() {
             }
 
             if (results.length > 0) {
-                console.log(`[Scraper] Successfully found ${results.length} results from ${url}. Scraped Date: ${scrapedDateStr || 'Unknown'}`);
-                return { date: scrapedDateStr, results }; // Return date + results
+                console.log(`[Scraper] Successfully found ${results.length} results from ${url}. Scraped Date Range: ${scrapedDateStr || 'Unknown'}`);
+                return {
+                    dateStr: scrapedDateStr,
+                    startDate: scrapedStartDate,
+                    endDate: scrapedEndDate,
+                    results
+                };
             } else {
                 console.log(`[Scraper] No results found on ${url}, trying next source...`);
             }
@@ -86,7 +93,7 @@ async function fetchDPBossResults() {
     }
 
     console.error("[Scraper] All sources failed fetching results.");
-    return { date: null, results: [] };
+    return { dateStr: null, startDate: null, endDate: null, results: [] };
 }
 
 module.exports = {

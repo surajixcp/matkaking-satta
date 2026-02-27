@@ -166,29 +166,58 @@ const startResultFetcher = () => {
                             if (parsed) {
                                 const today = new Date().toISOString().split('T')[0];
 
-                                // Helper to check if current IST time is past a given market time string (e.g. "03:15 PM")
-                                const isTimePast = (timeStr) => {
-                                    if (!timeStr) return true; // fallback
-
+                                // Helper to check if current time is correctly past the session time
+                                // Handles overnight markets (where open > close)
+                                const isSessionPast = (marketObj, sessionType) => {
                                     const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
                                     const currentMinutes = nowIST.getHours() * 60 + nowIST.getMinutes();
 
-                                    // Parse timeStr like "03:15 PM" to minutes
-                                    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-                                    if (!match) return true;
+                                    const parseTime = (timeStr) => {
+                                        if (!timeStr) return 0;
+                                        const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                                        if (!match) return 0;
+                                        let h = parseInt(match[1]);
+                                        const m = parseInt(match[2]);
+                                        const p = match[3].toUpperCase();
+                                        if (p === 'PM' && h < 12) h += 12;
+                                        if (p === 'AM' && h === 12) h = 0;
+                                        return h * 60 + m;
+                                    };
 
-                                    let hours = parseInt(match[1]);
-                                    const mins = parseInt(match[2]);
-                                    const period = match[3].toUpperCase();
+                                    const openMins = parseTime(marketObj.open_time);
+                                    const closeMins = parseTime(marketObj.close_time);
+                                    let targetMins = sessionType === 'open' ? openMins : closeMins;
 
-                                    if (period === 'PM' && hours < 12) hours += 12;
-                                    if (period === 'AM' && hours === 12) hours = 0;
-
-                                    const targetMinutes = hours * 60 + mins;
-
-                                    // Give a 5 minute buffer before accepting a result (e.g. if close is 5:00, accept at 4:55 just in case)
-                                    return currentMinutes >= (targetMinutes - 5);
+                                    if (openMins <= closeMins) {
+                                        // Day Market: both events are straightforward
+                                        return currentMinutes >= (targetMins - 5);
+                                    } else {
+                                        // Overnight Market: Crosses midnight (e.g. 21:00 to 09:00)
+                                        if (sessionType === 'open') {
+                                            // Open is late evening (e.g. 21:00)
+                                            return currentMinutes >= (openMins - 5);
+                                        } else {
+                                            // Close is next morning (e.g. 09:00)
+                                            // If it's late evening today, close has NOT passed for THIS business day.
+                                            // Close is only past if current time is >= closeMins AND it's the morning (current time < openMins).
+                                            if (currentMinutes >= openMins) return false; // Early in the business day (PM)
+                                            return currentMinutes >= (closeMins - 5); // Next morning (AM)
+                                        }
+                                    }
                                 };
+
+                                // CRITICAL BUG FIX: Detect if the scraped result is actually from yesterday
+                                // A valid result should NEVER have a close digit out BEFORE the market's close time.
+                                // If the parsed result has a valid close digit (not '*') but the current time is 
+                                // BEFORE the close time, it GUARANTEES this is yesterday's full result lingering on the scraper.
+                                const hasValidCloseDigit = parsed.closeDigit && parsed.closeDigit !== '*';
+                                const isBeforeCloseTime = !isSessionPast(market, 'close');
+
+                                if (hasValidCloseDigit && isBeforeCloseTime) {
+                                    // Log it once in a while or just silently skip so we don't spam.
+                                    // console.log(`[Auto-Declare] 🕒 Ignored result for ${market.name} as it contains close digits before close_time (Likely yesterday's result).`);
+                                    continue; // Skip this market entirely for today until DPBoss resets it
+                                }
 
                                 // Check if result exists for today
                                 let currentResult = await Result.findOne({
@@ -201,7 +230,7 @@ const startResultFetcher = () => {
                                     if (!currentResult || !currentResult.open_declare) {
                                         // CRITICAL CHECK: Make sure current time is actually past the Open Time!
                                         // Otherwise, it's just yesterday's result lingering on DPBoss.
-                                        if (isTimePast(market.open_time)) {
+                                        if (isSessionPast(market, 'open')) {
                                             console.log(`[Auto-Declare] Found OPEN for ${market.name}: ${parsed.openPanna}-${parsed.openDigit}`);
                                             try {
                                                 await resultsService.declareResult({
@@ -234,7 +263,7 @@ const startResultFetcher = () => {
 
                                     if (currentResult && currentResult.open_declare && !currentResult.close_declare) {
                                         // CRITICAL CHECK: Ensure time is past Close Time!
-                                        if (isTimePast(market.close_time)) {
+                                        if (isSessionPast(market, 'close')) {
                                             console.log(`[Auto-Declare] Found CLOSE for ${market.name}: ${parsed.closePanna}-${parsed.closeDigit}`);
                                             try {
                                                 await resultsService.declareResult({

@@ -71,10 +71,29 @@ const ProcessWithdrawalModal: React.FC<{
             <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Landmark size={12} /> Beneficiary</h4>
             <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-2">
               <div className="flex justify-between"><span className="text-[10px] text-slate-500 font-medium">Name</span><span className="text-[10px] font-bold text-slate-800">{request.details.holderName}</span></div>
-              {request.method === 'UPI' ? (<div className="flex justify-between"><span className="text-[10px] text-slate-500 font-medium">UPI</span><span className="text-[10px] font-bold text-indigo-600">{request.details.upiId}</span></div>) : (
+              {request.method === 'UPI' ? (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center"><span className="text-[10px] text-slate-500 font-medium">UPI</span><span className="text-[10px] font-bold text-indigo-600">{request.details.upiId}</span></div>
+                  {!readOnly && request.status === 'pending' && request.details.upiId && (
+                    <div className="flex justify-center mt-2 border-t border-slate-100 pt-3">
+                      <div className="text-center flex flex-col items-center">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Scan to Pay ₹{request.amount.toLocaleString()}</p>
+                        <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-200">
+                          <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`upi://pay?pa=${request.details.upiId}&pn=${request.details.holderName || request.userName}&am=${request.amount}&cu=INR`)}`}
+                            alt="UPI QR Code"
+                            className="w-32 h-32"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
                 <>
                   <div className="flex justify-between"><span className="text-[10px] text-slate-500 font-medium">Bank</span><span className="text-[10px] font-bold text-slate-800">{request.details.bankName}</span></div>
                   <div className="flex justify-between"><span className="text-[10px] text-slate-500 font-medium">A/C No.</span><span className="text-[10px] font-mono font-bold text-slate-800 tracking-tight">{request.details.accountNo}</span></div>
+                  <div className="flex justify-between"><span className="text-[10px] text-slate-500 font-medium">IFSC</span><span className="text-[10px] font-bold text-slate-800 tracking-tight">{request.details.ifsc || 'N/A'}</span></div>
                 </>
               )}
             </div>

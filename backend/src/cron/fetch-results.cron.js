@@ -18,8 +18,11 @@ function normalizeName(name) {
 function parseResult(numberString) {
     if (!numberString || numberString.includes("Loading")) return null;
 
+    // Normalise DPBoss space formats like "888-4* *" -> "888-4**"
+    const cleanedString = numberString.replace(/\s+/g, '');
+
     // Standard format: "290-12-147" OR "290-1" OR "2-147" OR "***-**-***"
-    const parts = numberString.split('-');
+    const parts = cleanedString.split('-');
 
     let openPanna = null;
     let openDigit = null;
@@ -46,12 +49,20 @@ function parseResult(numberString) {
         if (parts[2] !== '*') closeDigit = parts[2];
         if (parts[3] !== '***' && parts[3] !== '**') closePanna = parts[3];
     } else if (parts.length === 2) {
-        // "290-1" (Open Declared)
+        // "888-4**" or "290-1" (Open Declared)
         if (parts[0].length === 3 && parts[0] !== '***') {
             openPanna = parts[0];
         }
-        if (parts[1].length >= 1 && parts[1] !== '*') {
-            openDigit = parts[1][0];
+
+        const jodiPart = parts[1];
+
+        if (jodiPart.length >= 1 && jodiPart[0] !== '*') {
+            openDigit = jodiPart[0];
+        }
+
+        // Handle "4*" where open is 4, close is *
+        if (jodiPart.length >= 2 && jodiPart[1] !== '*') {
+            closeDigit = jodiPart[1];
         }
     }
 

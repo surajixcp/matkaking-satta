@@ -183,7 +183,7 @@ const startResultFetcher = () => {
 
                             const parsed = parseResult(r.number);
                             if (parsed) {
-                                const today = new Date().toISOString().split('T')[0];
+                                const today = todayIST;
 
                                 // Helper to check if current time is correctly past the session time
                                 // Handles overnight markets (where open > close)

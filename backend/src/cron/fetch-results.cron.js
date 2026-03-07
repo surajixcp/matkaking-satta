@@ -196,11 +196,38 @@ const startResultFetcher = () => {
                                         // Supports both 12-hour with AM/PM and 24-hour string formats
                                         const match = timeStr.trim().match(/^(\d+):(\d+)(?:\s*(AM|PM))?/i);
                                         if (!match) return 0;
+
                                         let h = parseInt(match[1], 10);
                                         const m = parseInt(match[2], 10);
                                         const p = match[3] ? match[3].toUpperCase() : null;
+
                                         if (p === 'PM' && h < 12) h += 12;
                                         if (p === 'AM' && h === 12) h = 0;
+
+                                        // Admin Data Entry Auto-Correction (When AM/PM is omitted and 12-hour format is used)
+                                        if (!p) {
+                                            // Matka markets do not operate between 1:00 AM and 8:59 AM. 
+                                            // Any 1-8 value MUST mean 1:00 PM - 8:59 PM.
+                                            if (h >= 1 && h <= 8) {
+                                                h += 12;
+                                            }
+                                            // 9:00 to 11:59 - Could be Morning (AM) or Night (PM)
+                                            else if (h >= 9 && h <= 11) {
+                                                const upName = marketObj.name.toUpperCase();
+                                                if (upName.includes('NIGHT') || upName.includes('EVENING') || upName.includes('RATAN') || upName.includes('MAIN BAZAR')) {
+                                                    h += 12; // It's a night market softly coded as 09:xx, force PM
+                                                }
+                                            }
+                                            // 12:xx - Could be 12 PM (Noon) or 12 AM (Midnight)
+                                            // Day markets use 12 for noon. Night markets use 12 for midnight.
+                                            else if (h === 12) {
+                                                const upName = marketObj.name.toUpperCase();
+                                                if (upName.includes('NIGHT') || upName.includes('EVENING') || upName.includes('RATAN') || upName.includes('MAIN BAZAR')) {
+                                                    h = 0; // Midnight
+                                                }
+                                            }
+                                        }
+
                                         return h * 60 + m;
                                     };
 

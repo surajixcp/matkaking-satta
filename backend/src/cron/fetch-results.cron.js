@@ -174,11 +174,23 @@ const startResultFetcher = () => {
                             // Actually, let's only log if we found a market to keep logs clean,
                             // OR save to ScrapedResult standardly.
 
-                            await ScrapedResult.create({
-                                game: r.game,
-                                number: r.number,
-                                fetchedAt: new Date() // Use current time
+                            // Upsert logic: Keep only the most recent ScrapedResult per game 
+                            // This prevents endless duplication in the Admin Panel's Live Feed
+                            let existingScrape = await ScrapedResult.findOne({
+                                where: { game: r.game }
                             });
+
+                            if (existingScrape) {
+                                existingScrape.number = r.number;
+                                existingScrape.fetchedAt = new Date();
+                                await existingScrape.save();
+                            } else {
+                                await ScrapedResult.create({
+                                    game: r.game,
+                                    number: r.number,
+                                    fetchedAt: new Date()
+                                });
+                            }
                             savedCount++;
 
                             const parsed = parseResult(r.number);

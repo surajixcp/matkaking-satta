@@ -243,14 +243,22 @@ const startResultFetcher = () => {
                                     } else {
                                         // Overnight Market: Crosses midnight (e.g. 21:00 to 09:00)
                                         if (sessionType === 'open') {
-                                            // Open is late evening (e.g. 21:00)
+                                            // Open is late evening (e.g. 21:00), so if it's currently anytime before 21:00, OPEN hasn't passed!
+                                            // E.g., at 11:55 AM (715 mins), 715 >= 1255 is FALSE. Correct.
                                             return currentMinutes >= (openMins - 5);
                                         } else {
                                             // Close is next morning (e.g. 09:00)
-                                            // If it's late evening today, close has NOT passed for THIS business day.
-                                            // Close is only past if current time is >= closeMins AND it's the morning (current time < openMins).
-                                            if (currentMinutes >= openMins) return false; // Early in the business day (PM)
-                                            return currentMinutes >= (closeMins - 5); // Next morning (AM)
+                                            // If current time is PM (>= openMins), it hasn't closed yet.
+                                            if (currentMinutes >= openMins) return false;
+
+                                            // BUT if it's the morning of the NEXT day...
+                                            // Let's say it's 11:55 AM (715 mins). closeMins is 09:00 (540 mins).
+                                            // 715 >= 535 is TRUE.
+                                            // HOWEVER, if OPEN has NOT passed today (currentMinutes < openMins), 
+                                            // we should ONLY evaluate close as true if we are actively in the morning period BEFORE the DAY'S cutoff 
+                                            // OR we just rely on the DB's `open_declare` check later in the code to block Close if Open isn't declared!
+                                            // Actually, if it's 11:55 AM, yesterday's market IS closed. True.
+                                            return currentMinutes >= (closeMins - 5);
                                         }
                                     }
                                 };

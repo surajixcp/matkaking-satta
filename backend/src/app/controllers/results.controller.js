@@ -4,7 +4,8 @@ const resultsService = require('../services/results.service');
 
 exports.getHistory = async (req, res, next) => {
     try {
-        const history = await resultsService.getHistory(true);
+        // The admin panel should ALWAYS see real-time results, never the 10-minute masked delay intended for the frontend app.
+        const history = await resultsService.getHistory(false);
         res.json({ success: true, data: history });
     } catch (error) {
         next(error);

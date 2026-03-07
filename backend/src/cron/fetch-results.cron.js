@@ -193,11 +193,12 @@ const startResultFetcher = () => {
 
                                     const parseTime = (timeStr) => {
                                         if (!timeStr) return 0;
-                                        const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                                        // Supports both 12-hour with AM/PM and 24-hour string formats
+                                        const match = timeStr.trim().match(/^(\d+):(\d+)(?:\s*(AM|PM))?/i);
                                         if (!match) return 0;
-                                        let h = parseInt(match[1]);
-                                        const m = parseInt(match[2]);
-                                        const p = match[3].toUpperCase();
+                                        let h = parseInt(match[1], 10);
+                                        const m = parseInt(match[2], 10);
+                                        const p = match[3] ? match[3].toUpperCase() : null;
                                         if (p === 'PM' && h < 12) h += 12;
                                         if (p === 'AM' && h === 12) h = 0;
                                         return h * 60 + m;

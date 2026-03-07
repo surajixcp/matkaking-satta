@@ -112,40 +112,45 @@ class MarketsService {
                 const openBetCloseMinutes = openTotalMinutes - 20;
                 let closeBetCloseMinutes = closeTotalMinutes - 20;
 
+                let openResultPassed = false;
+                let closeResultPassed = false;
+
                 if (openTotalMinutes <= closeTotalMinutes) {
                     // Day Market
                     openSessionOpen = currentTotalMinutes < openBetCloseMinutes;
                     closeSessionOpen = currentTotalMinutes < closeBetCloseMinutes;
-                    // Market is open overall until the close session result time
                     isOpen = currentTotalMinutes < closeTotalMinutes;
+
+                    openResultPassed = currentTotalMinutes >= openTotalMinutes;
+                    closeResultPassed = currentTotalMinutes >= closeTotalMinutes;
                 } else {
                     // Overnight Market
-                    // E.g., Open 21:00 (1260), Close 09:00 (540)
-                    if (closeBetCloseMinutes < 0) closeBetCloseMinutes += 1440; // Underflow into previous day, though rare for closing time. Handled generally.
+                    if (closeBetCloseMinutes < 0) closeBetCloseMinutes += 1440;
 
                     openSessionOpen = currentTotalMinutes > closeTotalMinutes && currentTotalMinutes < openBetCloseMinutes;
 
-                    // Close session is open if we are before its cutoff.
-                    // For overnight, "before close cutoff" could mean after open time up to midnight, OR from midnight up to cutoff.
                     if (currentTotalMinutes > openTotalMinutes || currentTotalMinutes < closeBetCloseMinutes) {
                         closeSessionOpen = true;
                     }
 
-                    // Market is open overall except exactly at the close time duration briefly, or standard overnight logic:
                     isOpen = currentTotalMinutes > closeTotalMinutes || currentTotalMinutes < closeTotalMinutes;
+
+                    openResultPassed = currentTotalMinutes >= openTotalMinutes;
+                    if (currentTotalMinutes >= openTotalMinutes) closeResultPassed = false;
+                    else closeResultPassed = currentTotalMinutes >= closeTotalMinutes;
                 }
             }
 
             // Result Masking:
-            // Do not reveal results (which might have been fetched early by scrapers)
-            // if the respective betting session is STILL actively accepting bets today.
+            // Prevent users from seeing auto-scraped results (like yesterday's phantom row lingering online)
+            // BEFORE the specific session's live declaration time actually passes!
             if (m.results && m.results.length > 0) {
                 const todayResult = m.results[0];
-                if (openSessionOpen) {
+                if (!openResultPassed) {
                     if (todayResult.setDataValue) todayResult.setDataValue('open_declare', null);
                     else todayResult.open_declare = null;
                 }
-                if (closeSessionOpen) {
+                if (!closeResultPassed || !openResultPassed) {
                     if (todayResult.setDataValue) todayResult.setDataValue('close_declare', null);
                     else todayResult.close_declare = null;
                 }

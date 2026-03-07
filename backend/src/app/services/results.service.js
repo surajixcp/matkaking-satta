@@ -26,22 +26,23 @@ class ResultsService {
      * @param {Object} data { marketId, session, panna, single, declaredBy }
      */
     async declareResult(data) {
-        const { marketId, session, panna, single, declaredBy } = data;
+        const { marketId, session, panna, single, declaredBy, date } = data;
         const transaction = await sequelize.transaction();
 
         try {
-            const today = new Date().toISOString().split('T')[0];
+            // Use the explicitly provided business date (perfect for Night Markets), fallback to current UTC date.
+            const targetDate = date || new Date().toISOString().split('T')[0];
 
             // 1. Find or Create Result Record for today
             let result = await Result.findOne({
-                where: { market_id: marketId, date: today },
+                where: { market_id: marketId, date: targetDate },
                 transaction
             });
 
             if (!result) {
                 result = await Result.create({
                     market_id: marketId,
-                    date: today
+                    date: targetDate
                 }, { transaction });
             }
 

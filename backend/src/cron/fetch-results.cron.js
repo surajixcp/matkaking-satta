@@ -276,9 +276,19 @@ const startResultFetcher = () => {
                                     continue; // Skip this market entirely for today until DPBoss resets it
                                 }
 
-                                // Check if result exists for today
+                                // Determine the true business date for this result
+                                // For overnight markets, if it's currently the morning (before open time), 
+                                // this result actually belongs to yesterday's session!
+                                let targetDate = todayIST;
+                                if (openMins > closeMins && currentMinutes < openMins) {
+                                    const yesterday = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+                                    yesterday.setDate(yesterday.getDate() - 1);
+                                    targetDate = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+                                }
+
+                                // Check if result exists for the target business date
                                 let currentResult = await Result.findOne({
-                                    where: { market_id: market.id, date: today }
+                                    where: { market_id: market.id, date: targetDate }
                                 });
 
                                 // 2. Detect if an incoming string is "Open Only" (e.g. 588-1) but it's already well past CLOSE time.
@@ -303,6 +313,7 @@ const startResultFetcher = () => {
                                             try {
                                                 await resultsService.declareResult({
                                                     marketId: market.id,
+                                                    date: targetDate,
                                                     session: 'Open',
                                                     panna: parsed.openPanna,
                                                     single: parsed.openDigit,
@@ -326,7 +337,7 @@ const startResultFetcher = () => {
                                 if (parsed.closePanna && parsed.closeDigit) {
                                     // Refresh logic
                                     currentResult = await Result.findOne({
-                                        where: { market_id: market.id, date: today }
+                                        where: { market_id: market.id, date: targetDate }
                                     });
 
                                     if (currentResult && currentResult.open_declare && !currentResult.close_declare) {
@@ -336,6 +347,7 @@ const startResultFetcher = () => {
                                             try {
                                                 await resultsService.declareResult({
                                                     marketId: market.id,
+                                                    date: targetDate,
                                                     session: 'Close',
                                                     panna: parsed.closePanna,
                                                     single: parsed.closeDigit,

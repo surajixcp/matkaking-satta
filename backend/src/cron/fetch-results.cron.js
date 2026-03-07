@@ -185,11 +185,13 @@ const startResultFetcher = () => {
                             if (parsed) {
                                 const today = todayIST;
 
-                                // Helper to check if current time is correctly past the session time
-                                // Handles overnight markets (where open > close)
                                 const isSessionPast = (marketObj, sessionType) => {
-                                    const nowIST = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-                                    const currentMinutes = nowIST.getHours() * 60 + nowIST.getMinutes();
+                                    // Make SURE to evaluate IST hours/minutes since server might be UTC
+                                    const nowISTstr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit' });
+                                    const [istHour, istMinute] = nowISTstr.split(':').map(Number);
+
+                                    // Hard fallback if toLocaleString fails formatting
+                                    const currentMinutes = istHour !== undefined && !isNaN(istHour) ? (istHour === 24 ? 0 : istHour) * 60 + istMinute : new Date().getHours() * 60 + new Date().getMinutes();
 
                                     const parseTime = (timeStr) => {
                                         if (!timeStr) return 0;
